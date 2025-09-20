@@ -1,0 +1,20 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 환경변수 파일
+.env
+.env.*
+!env.example
+
+# VSCode 설정
+.vscode/
+
+# OS 기본 파일
+.DS_Store
+Thumbs.db
+
+
+

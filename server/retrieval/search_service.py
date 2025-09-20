@@ -1,92 +1,37 @@
-import streamlit as st
+"""
+search_service.py
+VectorSearchService를 감싼 고수준 검색 서비스
+"""
+
+from typing import List
 from langchain.schema import Document
-from typing import List, Literal
-from duckduckgo_search import DDGS
-from langchain.schema import HumanMessage, SystemMessage
-from utils.config import get_llm
+from server.retrieval.vector_store import VectorSearchService
 
 
-def improve_search_query(
-    topic: str,
-    role: Literal["PRO_AGENT", "CON_AGENT", "JUDGE_AGENT"] = "JUDGE_AGENT",
-) -> List[str]:
+class SearchService:
+    def __init__(self, persist_path: str = "db/faiss_index"):
+        self.vector_service = VectorSearchService(persist_path=persist_path)
 
-    template = "'{topic}'에 대해 {perspective} 웹검색에 적합한 3개의 검색어를 제안해주세요. 각 검색어는 25자 이내로 작성하고 콤마로 구분하세요. 검색어만 제공하고 설명은 하지 마세요."
+    def ingest_and_index(self, topic: str, role: str = "GENERAL", max_results: int = 5) -> None:
+        """
+        특정 주제에 대해:
+        1) 검색어 개선
+        2) 웹 검색
+        3) 벡터스토어 인덱싱
+        """
+        queries = self.vector_service.improve_search_query(topic, role=role)
+        docs = self.vector_service.web_search(queries, max_results=max_results)
+        self.vector_service.build_index(docs)
 
-    perspective_map = {
-        "PRO_AGENT": "찬성하는 입장을 뒷받침할 수 있는 사실과 정보를 찾고자 합니다.",
-        "CON_AGENT": "반대하는 입장을 뒷받침할 수 있는 사실과 정보를 찾고자 합니다.",
-        "JUDGE_AGENT": "객관적인 사실과 정보를 찾고자 합니다.",
-    }
+    def search_documents(self, query: str, k: int = 3) -> List[Document]:
+        """
+        벡터스토어에서 쿼리 기반 검색
+        """
+        return self.vector_service.search(query, k=k)
 
-    prompt = template.format(topic=topic, perspective=perspective_map[role])
-
-    messages = [
-        SystemMessage(
-            content="당신은 검색 전문가입니다. 주어진 주제에 대해 가장 관련성 높은 검색어를 제안해주세요."
-        ),
-        HumanMessage(content=prompt),
-    ]
-
-    # 스트리밍 응답 받기
-    response = get_llm().invoke(messages)
-
-    # ,로 구분된 검색어 추출
-    suggested_queries = [q.strip() for q in response.content.split(",")]
-
-    return suggested_queries[:3]
-
-
-def get_search_content(
-    improved_queries: str,
-    language: str = "ko",
-    max_results: int = 5,
-) -> List[Document]:
-
-    try:
-        documents = []
-
-        ddgs = DDGS()
-
-        # 각 개선된 검색어에 대해 검색 수행
-        for query in improved_queries:
-            try:
-                # 검색 수행
-                results = ddgs.text(
-                    query,
-                    region=language,
-                    safesearch="moderate",
-                    timelimit="y",  # 최근 1년 내 결과
-                    max_results=max_results,
-                )
-
-                if not results:
-                    continue
-
-                # 검색 결과 처리
-                for result in results:
-                    title = result.get("title", "")
-                    body = result.get("body", "")
-                    url = result.get("href", "")
-
-                    if body:
-                        documents.append(
-                            Document(
-                                page_content=body,
-                                metadata={
-                                    "source": url,
-                                    "section": "content",
-                                    "topic": title,
-                                    "query": query,
-                                },
-                            )
-                        )
-
-            except Exception as e:
-                st.warning(f"검색 중 오류 발생: {str(e)}")
-
-        return documents
-
-    except Exception as e:
-        st.error(f"검색 서비스 오류 발생: {str(e)}")
-        return []
+    def quick_search(self, topic: str, role: str = "GENERAL", k: int = 3) -> List[Document]:
+        """
+        고수준 메서드: 검색어 개선 → 웹검색 → 인덱싱 → 검색까지 한 번에
+        """
+        self.ingest_and_index(topic, role=role)
+        return self.search_documents(topic, k=k)

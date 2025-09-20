@@ -1,35 +1,120 @@
+"""
+vector_service.py
+검색(Query 개선 → 웹 검색 → 문서 → 벡터스토어 저장/검색) 풀 파이프라인
+"""
+
+import os
+from typing import List, Literal
 import streamlit as st
-from langchain_community.vectorstores import FAISS
-from typing import Any, Dict, Optional, List
-from retrieval.search_service import get_search_content, improve_search_query
-from utils.config import get_embeddings
+
+from langchain.schema import Document, HumanMessage, SystemMessage
+from duckduckgo_search import DDGS
+from langchain_openai import OpenAIEmbeddings
+from langchain.vectorstores import FAISS
+
+from utils.config import get_llm
 
 
-def get_topic_vector_store(
-    topic: str, role: str, language: str = "ko"
-) -> Optional[FAISS]:
+class VectorSearchService:
+    def __init__(self, persist_path: str = "db/faiss_index"):
+        self.persist_path = persist_path
+        self.embeddings = OpenAIEmbeddings(
+            model="text-embedding-3-small", api_key=os.getenv("OPENAI_API_KEY")
+        )
+        self.vectorstore = None
+        self.ddgs = DDGS()
 
-    # 검색어 개선
-    improved_queries = improve_search_query(topic, role)
-    # 개선된 검색어로 검색 콘텐츠 가져오기
-    documents = get_search_content(improved_queries, language)
-    if not documents:
-        return None
-    try:
-        return FAISS.from_documents(documents, get_embeddings())
-    except Exception as e:
-        st.error(f"Vector DB 생성 중 오류 발생: {str(e)}")
-        return None
+    # 1. 쿼리 개선
+    def improve_search_query(
+        self,
+        topic: str,
+        role: Literal["STRATEGY", "COMPETITOR", "GENERAL"] = "GENERAL",
+    ) -> List[str]:
+        """LLM을 활용해 검색어 3개 생성"""
+        template = (
+            "'{topic}'에 대해 {perspective} 웹검색에 적합한 3개의 검색어를 제안해주세요. "
+            "각 검색어는 25자 이내로 작성하고 콤마로 구분하세요. "
+            "검색어만 제공하고 설명은 하지 마세요."
+        )
 
+        perspective_map = {
+            "STRATEGY": "사업 전략 수립에 필요한 시장, 정책, 트렌드 정보를 찾고자 합니다.",
+            "COMPETITOR": "경쟁사, 대체 서비스, 기술 비교 정보를 찾고자 합니다.",
+            "GENERAL": "객관적인 사실과 정보를 찾고자 합니다.",
+        }
 
-def search_topic(topic: str, role: str, query: str, k: int = 5) -> List[Dict[str, Any]]:
-    # 문서를 검색해서 벡터 스토어 생성
-    vector_store = get_topic_vector_store(topic, role)
-    if not vector_store:
-        return []
-    try:
-        # 벡터 스토어에서 Similarity Search 수행
-        return vector_store.similarity_search(query, k=k)
-    except Exception as e:
-        st.error(f"검색 중 오류 발생: {str(e)}")
-        return []
+        prompt = template.format(topic=topic, perspective=perspective_map[role])
+
+        messages = [
+            SystemMessage(content="당신은 검색 전문가입니다. 관련성 높은 검색어만 제안해주세요."),
+            HumanMessage(content=prompt),
+        ]
+
+        response = get_llm().invoke(messages)
+        queries = [q.strip() for q in response.content.split(",")]
+
+        return queries[:3]
+
+    # 2. 웹 검색 → Document 리스트 변환
+    def web_search(self, queries: List[str], language: str = "ko", max_results: int = 5) -> List[Document]:
+        documents = []
+
+        for query in queries:
+            try:
+                results = self.ddgs.text(
+                    query,
+                    region=language,
+                    safesearch="moderate",
+                    timelimit="y",  # 최근 1년
+                    max_results=max_results,
+                )
+
+                if not results:
+                    continue
+
+                for result in results:
+                    title = result.get("title", "")
+                    body = result.get("body", "")
+                    url = result.get("href", "")
+
+                    if body:
+                        documents.append(
+                            Document(
+                                page_content=body,
+                                metadata={
+                                    "source": url,
+                                    "topic": title,
+                                    "query": query,
+                                },
+                            )
+                        )
+            except Exception as e:
+                st.warning(f"검색 중 오류 발생: {str(e)}")
+
+        return documents
+
+    # 3. 벡터스토어 구축
+    def build_index(self, docs: List[Document]):
+        if not docs:
+            raise ValueError("❌ 인덱싱할 문서가 없습니다.")
+        texts = [d.page_content for d in docs]
+        metadatas = [d.metadata for d in docs]
+        self.vectorstore = FAISS.from_texts(texts, self.embeddings, metadatas=metadatas)
+        self.vectorstore.save_local(self.persist_path)
+
+    def load_index(self):
+        if os.path.exists(self.persist_path):
+            self.vectorstore = FAISS.load_local(
+                self.persist_path,
+                self.embeddings,
+                allow_dangerous_deserialization=True,
+            )
+
+    # 4. 쿼리 검색
+    def search(self, query: str, k: int = 3) -> List[Document]:
+        if not self.vectorstore:
+            self.load_index()
+        if not self.vectorstore:
+            raise ValueError("❌ Vectorstore가 초기화되지 않았습니다.")
+        results = self.vectorstore.similarity_search(query, k=k)
+        return results
