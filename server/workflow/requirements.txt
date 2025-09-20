@@ -1,0 +1,20 @@
+# Core
+streamlit
+python-dotenv
+
+# LangChain & LangGraph
+langchain
+langgraph
+
+# OpenAI (LLM & Embeddings)
+openai
+langchain-openai
+
+# Vector Store
+faiss-cpu
+
+# Search
+duckduckgo-search
+
+# Utilities
+tqdm
