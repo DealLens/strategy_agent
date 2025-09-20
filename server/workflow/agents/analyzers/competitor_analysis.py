@@ -1,5 +1,5 @@
 from langchain_core.tools import tool
-from .base_agent import BaseAgent
+from ..base_agent import BaseAgent
 
 @tool
 def analyze_competitor(name: str) -> dict:

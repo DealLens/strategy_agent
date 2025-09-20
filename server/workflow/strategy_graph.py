@@ -1,10 +1,10 @@
 from langgraph.graph import StateGraph, END
 from workflow.state import StrategyState
-from workflow.agents.rfp_parser import RFPParser
-from workflow.agents.internal_rag import InternalRAG
-from workflow.agents.competitor_analysis import CompetitorAnalysis
-from workflow.agents.strategy_builder import StrategyBuilder
-from workflow.agents.reporter import Reporter
+from server.workflow.agents.parsers.rfp_parser import RFPParser
+from server.workflow.agents.analyzers.internal_rag import InternalRAG
+from server.workflow.agents.analyzers.competitor_analysis import CompetitorAnalysis
+from server.workflow.agents.builders.strategy_builder import StrategyBuilder
+from server.workflow.agents.builders.reporter import Reporter
 
 
 def create_strategy_graph():

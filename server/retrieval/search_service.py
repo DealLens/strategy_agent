@@ -5,7 +5,7 @@ VectorSearchService를 감싼 고수준 검색 서비스
 
 from typing import List
 from langchain.schema import Document
-from server.retrieval.vector_store import VectorSearchService
+from server.retrieval.vector_service import VectorSearchService
 
 
 class SearchService:

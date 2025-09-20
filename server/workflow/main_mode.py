@@ -4,11 +4,11 @@ DealLens 실행 모드 라우터
 """
 
 # 필요한 에이전트 불러오기
-from server.workflow.agents.strategy_builder import run_strategy_builder
-from server.workflow.agents.competitor_analysis import run_competitor_analysis
-from server.workflow.agents.rfp_parser import run_rfp_parser
-from server.workflow.agents.internal_rag import run_internal_rag
-from server.workflow.agents.reporter import run_reporter
+from server.workflow.agents.builders.strategy_builder import run_strategy_builder
+from server.workflow.agents.analyzers.competitor_analysis import run_competitor_analysis
+from server.workflow.agents.parsers.rfp_parser import run_rfp_parser
+from server.workflow.agents.analyzers.internal_rag import run_internal_rag
+from server.workflow.agents.builders.reporter import run_reporter
 
 
 def run_mode(mode: str, topic: str, enable_rag: bool = True) -> str:

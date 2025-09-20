@@ -1,6 +1,6 @@
 import streamlit as st
 from app.utils.state_manager import init_session_state, reset_session_state, set_analysis_to_state
-from main_mode import run_mode
+from server.workflow.main_mode import run_mode
 
 def render_input_form():
     """사용자 입력 폼"""
