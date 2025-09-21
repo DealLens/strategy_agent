@@ -1,20 +1,29 @@
 # Core
-streamlit
-python-dotenv
+streamlit>=1.37.0
+python-dotenv>=1.0.1
 
 # LangChain & LangGraph
-langchain
-langgraph
+langchain>=0.3.0
+langchain-core>=0.3.0
+langgraph>=0.2.0
 
 # OpenAI (LLM & Embeddings)
-openai
-langchain-openai
+openai>=1.40.0
+langchain-openai>=0.1.0
 
 # Vector Store
-faiss-cpu
+faiss-cpu>=1.8.0
 
 # Search
-duckduckgo-search
+duckduckgo-search>=6.1.0
 
 # Utilities
-tqdm
+tqdm>=4.66.0
+
+# (Optional) Data processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# (Optional) API server
+fastapi>=0.110.0
+uvicorn>=0.30.0

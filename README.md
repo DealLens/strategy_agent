@@ -48,3 +48,12 @@ UI는 **Streamlit** 기반으로 제공되어, 브라우저에서 손쉽게 주�
 - **Git** → 버전 관리
 - **requirements.txt** → 패키지 의존성 관리
 - **Supervisor**: 사용자가 요청한 작업(요구사항 분석, 내부 매칭, 경쟁사 분석, 전략, 보고서)을 자동으로 해당 에이전트에 라우팅하여 실행
+
+---
+
+## 🚀 실행 방법
+
+### 1) 패키지 설치
+MacOS / Linux 환경에서는 `pip3`를 사용하세요:
+```bash
+pip3 install -r requirements.txt

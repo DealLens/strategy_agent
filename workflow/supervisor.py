@@ -1,8 +1,8 @@
-from server.workflow.agents.parsers.rfp_parser import RFPParserAgent
-from server.workflow.agents.analyzers.internal_rag import InternalRAGAgent
-from server.workflow.agents.analyzers.competitor_analysis import CompetitorAnalysisAgent
-from server.workflow.agents.builders.strategy_builder import StrategyBuilderAgent
-from server.workflow.agents.builders.reporter import ReporterAgent
+from workflow.agents.parsers.rfp_parser import RFPParserAgent
+from workflow.agents.analyzers.internal_rag import InternalRAGAgent
+from workflow.agents.analyzers.competitor_analysis import CompetitorAnalysisAgent
+from workflow.agents.builders.strategy_builder import StrategyBuilderAgent
+from workflow.agents.builders.reporter import ReporterAgent
 
 
 class Supervisor:
