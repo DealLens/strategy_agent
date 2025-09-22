@@ -4,6 +4,7 @@ DealLens 실행 모드 라우터
 """
 
 import json
+from typing import Optional, List
 from workflow.supervisor_agent import run_deallens_pipeline
 from workflow.agents.builders.strategy_builder import run_strategy_builder
 from workflow.agents.analyzers.competitor_analysis import run_competitor_analysis
@@ -12,7 +13,7 @@ from workflow.agents.analyzers.internal_rag import run_internal_rag
 from workflow.agents.builders.reporter import run_reporter
 
 
-def run_mode(mode: str, topic: str, enable_rag: bool = True) -> str:
+def run_mode(mode: str, topic: str, companies: Optional[List[str]] = None, enable_rag: bool = True) -> str:
     """
     선택된 모드에 따라 해당 분석 에이전트를 실행합니다.
 
@@ -35,7 +36,7 @@ def run_mode(mode: str, topic: str, enable_rag: bool = True) -> str:
                 topic = parts[0].strip()
                 user_prompt = parts[1].strip() if len(parts) > 1 else None
             
-            result = run_deallens_pipeline(topic, user_prompt=user_prompt)
+            result = run_deallens_pipeline(topic, companies=companies, user_prompt=user_prompt)
             if result.get("error"):
                 return f"❌ 오류: {result['error']}"
             
@@ -54,12 +55,6 @@ def run_mode(mode: str, topic: str, enable_rag: bool = True) -> str:
             output += f"\n## 🎯 내부 역량 매칭\n"
             for match in result["artifacts"]["B"].get("matches", []):
                 output += f"- {match}\n"
-            
-            output += f"\n## ⚔️ 경쟁사 분석\n"
-            for company, profile in result["artifacts"]["C"].get("profiles", {}).items():
-                output += f"### {company}\n"
-                output += f"- 강점: {', '.join(profile.get('strengths', []))}\n"
-                output += f"- 약점: {', '.join(profile.get('weaknesses', []))}\n"
             
             output += f"\n## 🚀 제안 전략\n"
             for action in result["artifacts"]["D"].get("actions", []):

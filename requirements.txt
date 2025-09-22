@@ -17,6 +17,11 @@ faiss-cpu>=1.8.0
 # Search
 duckduckgo-search>=6.1.0
 
+# Web Scraping
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
 # Utilities
 tqdm>=4.66.0
 

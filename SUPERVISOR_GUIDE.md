@@ -7,33 +7,47 @@ DealLens Supervisor Agent는 RFP 업로드 시 **세션 캐시 없이** 매 요�
 ## 🔄 실행 순서
 
 ```
-A(RFP Parser) → B(Internal RAG) → C(Competitor) → D(Strategy) → E(Reporter)
+A(RFP Parser) → [B(Internal RAG) → C(Competitor) → D(Strategy)] × 최대 3회 → E(Reporter)
 ```
 
-### 1. A: RFP Parser
+### 1. A: RFP Parser (1회 실행)
 - **입력**: PDF 파일 경로
 - **출력**: `{requirements[], criteria[], risks[]}`
 - **기능**: RFP 문서에서 요구사항, 평가기준, 리스크 추출
 
-### 2. B: Internal RAG
-- **입력**: A단계의 requirements 리스트
-- **출력**: `{matches[], references[]}`
-- **기능**: 내부 지식베이스에서 매칭되는 프로젝트/솔루션 검색
+### 2. B: Internal RAG (갭 분석)
+- **입력**: A단계의 requirements 리스트, 반복 횟수
+- **출력**: `{matches[], references[], gaps[], improvements[]}`
+- **기능**: 내부 지식베이스 검색 + 갭 분석 + 보완책 제안
 
-### 3. C: Competitor Analysis
-- **입력**: 분석할 경쟁사 목록 (기본값: 삼성 SDS, LG CNS, 포스코DX, KT, 현대오토에버, 카카오, CJ 올리브네트웍스)
-- **출력**: `{profiles: {<회사명>: {...}, ...}}`
-- **기능**: 경쟁사 프로필 및 SWOT 분석
+### 3. C: Competitor Analysis (차별화 포인트 + 웹 크롤링)
+- **입력**: 분석할 경쟁사 목록, 반복 횟수
+- **출력**: `{profiles: {<회사명>: {...}, ...}, differentiation_points[], scraping_status}`
+- **기능**: 경쟁사 SWOT 분석 + 차별화 포인트 도출 + 실시간 웹 크롤링
+- **웹 크롤링 대상**:
+  - 삼성 SDS: https://www.samsungsds.com/kr/case-study/index.html
+  - LG CNS: https://www.lgcns.com/kr/newsroom/press
 
-### 4. D: Strategy Synthesis
+### 4. D: Strategy Synthesis (합성 전략)
 - **입력**: A, B, C 단계의 모든 결과
-- **출력**: `{actions[], our_swot{}, differentiation[]}`
-- **기능**: 종합 분석을 통한 전략 수립
+- **출력**: `{actions[], our_swot{}, differentiation[], completeness_score, gaps_remaining[]}`
+- **기능**: 종합 분석을 통한 전략 수립 + 완성도 점수 계산
 
-### 5. E: Report Generation
-- **입력**: 모든 단계의 결과
+### 5. E: Report Generation (최종 보고서)
+- **입력**: 모든 단계의 결과 + 반복 결과
 - **출력**: 마크다운 형태의 보고서 문자열
-- **기능**: 최종 제안 브리핑 생성
+- **기능**: 최종 제안 브리핑 + 최적화 과정 기록
+
+## 🔄 반복적 최적화 로직
+
+### 전략 완성도 평가
+- **완성도 점수**: 100 - (남은 갭 수 × 20)
+- **최적화 조건**: 완성도 점수 ≥ 80점 또는 최대 3회 반복
+- **최고 전략 선택**: 가장 높은 완성도 점수를 가진 전략을 최종 결과로 선택
+
+### 반복 과정 추적
+- 각 반복마다 완성도 점수와 남은 갭을 기록
+- 개선 과정을 보고서에 포함하여 투명성 확보
 
 ## 📊 최종 반환 포맷
 
@@ -41,10 +55,15 @@ A(RFP Parser) → B(Internal RAG) → C(Competitor) → D(Strategy) → E(Report
 {
   "artifacts": {
     "A": { "requirements": [...], "criteria": [...], "risks": [...] },
-    "B": { "matches": [...], "references": [...] },
-    "C": { "profiles": { "<회사>": {...}, ... } },
-    "D": { "actions": [...], "our_swot": {...}, "differentiation": [...] }
+    "B": { "matches": [...], "references": [...], "gaps": [...], "improvements": [...] },
+    "C": { "profiles": { "<회사>": {...}, ... }, "differentiation_points": [...] },
+    "D": { "actions": [...], "our_swot": {...}, "differentiation": [...], "completeness_score": 85, "gaps_remaining": [...] }
   },
+  "iteration_results": [
+    { "iteration": 1, "completeness_score": 60, "gaps_remaining": [...] },
+    { "iteration": 2, "completeness_score": 80, "gaps_remaining": [...] }
+  ],
+  "final_score": 85,
   "deal_brief": "<E가 생성한 1~2p 요약(마크다운 허용)>",
   "qa_ready": true
 }
@@ -87,7 +106,13 @@ result = run_deallens_pipeline("path/to/rfp.pdf", ["삼성 SDS", "LG CNS"])
 
 ## 🔧 확장 가능한 툴
 
-현재 구현된 툴들은 샘플 데이터를 반환합니다. 실제 운영을 위해서는 다음 기능들을 구현해야 합니다:
+### ✅ 구현 완료
+- **웹 크롤링**: 삼성 SDS, LG CNS 실시간 데이터 수집
+- **반복적 최적화**: 최대 3회 전략 개선
+- **갭 분석**: 내부 역량과 요구사항 매칭
+- **차별화 포인트**: 경쟁사 대비 우위 요소 도출
+
+### 🚧 추가 구현 필요
 
 ### parse_rfp()
 - PyPDF2, pdfplumber 등을 사용한 실제 PDF 파싱
@@ -99,9 +124,9 @@ result = run_deallens_pipeline("path/to/rfp.pdf", ["삼성 SDS", "LG CNS"])
 - 임베딩 기반 유사도 검색
 - 내부 프로젝트 데이터베이스 연동
 
-### load_competitor_data()
+### load_competitor_data() (확장)
+- 추가 경쟁사 웹 크롤링 (포스코DX, KT, 현대오토에버 등)
 - 경쟁사 정보 데이터베이스 연결
-- 웹 스크래핑 또는 API 연동
 - 실시간 정보 업데이트
 
 ### synthesize_strategy()

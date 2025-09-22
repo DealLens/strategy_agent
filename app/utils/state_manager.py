@@ -16,6 +16,7 @@ def reset_session_state():
     st.session_state.uploaded_file_path = None # 업로드된 파일 경로
     st.session_state.uploaded_file_name = None # 업로드된 파일명
     st.session_state.user_prompt = None        # 사용자 프롬프트
+    st.session_state.selected_companies = []   # 선택된 경쟁사 목록
 
 def set_analysis_to_state(topic: str, result: str, docs: dict = None):
     """
