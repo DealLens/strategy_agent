@@ -1,5 +1,5 @@
 from langgraph.graph import StateGraph, END
-from workflow.state import StrategyState
+from workflow import StrategyState
 from workflow.agents.parsers.rfp_parser import RFPParser
 from workflow.agents.analyzers.internal_rag import InternalRAG
 from workflow.agents.analyzers.competitor_analysis import CompetitorAnalysis

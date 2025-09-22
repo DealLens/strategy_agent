@@ -1,6 +1,8 @@
 from langchain_core.tools import tool
 from ..base_agent import BaseAgent
 
+# C. 경쟁사 분석
+
 @tool
 def analyze_competitor(name: str) -> dict:
     """경쟁사 프로필 및 SWOT 분석"""

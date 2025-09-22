@@ -2,6 +2,8 @@ from typing import Dict, Any, List
 from langchain_core.tools import tool
 from ..base_agent import BaseAgent
 
+
+ # E. 리포팅 (Q&A 포함)
 @tool
 def generate_report(all_results: List[Dict[str, Any]]) -> str:
     """최종 보고서 생성"""
