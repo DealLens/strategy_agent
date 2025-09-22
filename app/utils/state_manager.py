@@ -13,6 +13,9 @@ def reset_session_state():
     st.session_state.analysis_result = None    # 분석 결과
     st.session_state.docs = {}                 # RAG 문서 저장소
     st.session_state.viewing_history = False   # 과거 분석 조회 여부
+    st.session_state.uploaded_file_path = None # 업로드된 파일 경로
+    st.session_state.uploaded_file_name = None # 업로드된 파일명
+    st.session_state.user_prompt = None        # 사용자 프롬프트
 
 def set_analysis_to_state(topic: str, result: str, docs: dict = None):
     """

@@ -25,6 +25,11 @@ class CompetitorAnalysisAgent(BaseAgent):
             tools=[analyze_competitor]
         )
 
+def run_competitor_analysis(topic: str) -> str:
+    """경쟁사 분석 실행 함수"""
+    agent = CompetitorAnalysisAgent()
+    return agent.run(f"다음 주제에 대한 경쟁사 분석을 수행해줘: {topic}")
+
 if __name__ == "__main__":
     agent = CompetitorAnalysisAgent()
     output = agent.run("삼성 SDS를 분석해줘")

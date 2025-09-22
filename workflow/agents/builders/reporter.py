@@ -21,6 +21,11 @@ class ReporterAgent(BaseAgent):
             tools=[generate_report]
         )
 
+def run_reporter(topic: str) -> str:
+    """리포터 실행 함수"""
+    agent = ReporterAgent()
+    return agent.run(f"다음 주제에 대한 최종 보고서를 작성해줘: {topic}")
+
 if __name__ == "__main__":
     agent = ReporterAgent()
     sample_results = [

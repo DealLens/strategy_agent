@@ -40,6 +40,11 @@ class StrategyBuilderAgent(BaseAgent):
         )
 
 
+def run_strategy_builder(topic: str, enable_rag: bool = True) -> str:
+    """전략 빌더 실행 함수"""
+    agent = StrategyBuilderAgent()
+    return agent.run(f"다음 주제에 대한 전략을 수립해줘: {topic}")
+
 if __name__ == "__main__":
     # 에이전트 실행 테스트
     agent = StrategyBuilderAgent()

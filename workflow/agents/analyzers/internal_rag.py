@@ -18,6 +18,11 @@ class InternalRAGAgent(BaseAgent):
             tools=[match_internal_requirements]
         )
 
+def run_internal_rag(topic: str) -> str:
+    """내부 RAG 실행 함수"""
+    agent = InternalRAGAgent()
+    return agent.run(f"다음 주제에 대한 내부 프로젝트 매칭을 수행해줘: {topic}")
+
 if __name__ == "__main__":
     agent = InternalRAGAgent()
     output = agent.run("요구사항 리스트를 내부 프로젝트와 매칭해줘.")
