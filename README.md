@@ -54,6 +54,8 @@ UI는 **Streamlit** 기반으로 제공되어, 브라우저에서 손쉽게 주�
 ## 🚀 실행 방법
 
 ### 1) 패키지 설치
-MacOS / Linux 환경에서는 `pip3`를 사용하세요:
+MacOS / Linux 환경에서는 `pip3`를 사용, 윈도우에서는 'pip'를 사용하세요. 
 ```bash
 pip3 install -r requirements.txt
+pip install -r requirements.txt
+
