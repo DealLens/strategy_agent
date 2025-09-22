@@ -4,7 +4,6 @@ from workflow.agents.analyzers.competitor_analysis import CompetitorAnalysisAgen
 from workflow.agents.builders.strategy_builder import StrategyBuilderAgent
 from workflow.agents.builders.reporter import ReporterAgent
 
-
 class Supervisor:
     def __init__(self):
         # 에이전트 초기화
