@@ -1,55 +1,47 @@
-from workflow.agents.parsers.rfp_parser import RFPParserAgent
-from workflow.agents.analyzers.internal_rag import InternalRAGAgent
-from workflow.agents.analyzers.competitor_analysis import CompetitorAnalysisAgent
-from workflow.agents.builders.strategy_builder import StrategyBuilderAgent
-from workflow.agents.builders.reporter import ReporterAgent
+import os
+from langchain_openai import AzureChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from langchain.agents import create_tool_calling_agent, AgentExecutor
 
+from workflow.agents.rfp_parser import rfp_parser
+from workflow.agents.internal_rag import internal_rag
+from workflow.agents.competitor_analysis import competitor_analysis
+from workflow.agents.strategy_synthesizer import strategy_synthesizer
+from workflow.agents.reporter import reporter
 
-class Supervisor:
-    def __init__(self):
-        # 에이전트 초기화
-        self.agents = {
-            "rfp": RFPParserAgent(),
-            "rag": InternalRAGAgent(),
-            "competitor": CompetitorAnalysisAgent(),
-            "strategy": StrategyBuilderAgent(),
-            "reporter": ReporterAgent(),
-        }
+tools = [rfp_parser, internal_rag, competitor_analysis, strategy_synthesizer, reporter]
 
-    def route(self, task: str, user_input: str):
-        """
-        task 키워드에 따라 적절한 에이전트를 실행합니다.
-        세션 캐시는 사용하지 않고, 단순 실행 후 결과만 반환합니다.
-        """
-        if "요구사항" in task or "RFP" in task:
-            return self.agents["rfp"].run(user_input)
-        elif "매칭" in task or "내부" in task:
-            return self.agents["rag"].run(user_input)
-        elif "경쟁사" in task:
-            return self.agents["competitor"].run(user_input)
-        elif "전략" in task:
-            return self.agents["strategy"].run(user_input)
-        elif "보고서" in task or "리포트" in task:
-            return self.agents["reporter"].run(user_input)
-        else:
-            return f" 지원하지 않는 작업입니다: {task}"
+prompt = ChatPromptTemplate.from_messages([
+    (
+        "system",
+        "너는 Supervisor야. "
+        "RFP 분석 → 내부매칭 → 경쟁사 분석 → 전략 → 리포트 순서로 진행해. "
+        "품질이 부족하면 같은 툴을 다시 호출할 수도 있지만, 최대 3회까지만 반복 가능해."
+    ),
+    ("placeholder", "{chat_history}"),
+    ("human", "{input}"),
+    ("placeholder", "{agent_scratchpad}")
+])
 
+# 환경변수에서 불러오기
+AOAI_ENDPOINT = os.getenv("AOAI_ENDPOINT")
+AOAI_API_KEY = os.getenv("AOAI_API_KEY")
+AOAI_DEPLOY_GPT4O = os.getenv("AOAI_DEPLOY_GPT4O")
+AOAI_API_VERSION = os.getenv("AOAI_API_VERSION", "2024-05-01-preview")
 
-if __name__ == "__main__":
-    sup = Supervisor()
+llm = AzureChatOpenAI(
+    azure_endpoint=AOAI_ENDPOINT,
+    azure_deployment=AOAI_DEPLOY_GPT4O,
+    api_version=AOAI_API_VERSION,
+    api_key=AOAI_API_KEY,
+)
 
-    # 전체 파이프라인 실행 (데모용)
-    reqs = sup.route("요구사항", "sample.pdf")
-    print("1. 요구사항:", reqs)
+agent = create_tool_calling_agent(llm, tools, prompt)
 
-    rag = sup.route("매칭", str(reqs))
-    print("2. 내부 매칭:", rag)
-
-    comp = sup.route("경쟁사", "삼성 SDS")
-    print("3. 경쟁사 분석:", comp)
-
-    strat = sup.route("전략", f"{reqs}, {rag}, {comp}")
-    print("4. 전략:", strat)
-
-    report = sup.route("보고서", str(strat))
-    print("5.최종 보고서:", report)
+supervisor = AgentExecutor(
+    agent=agent,
+    tools=tools,
+    verbose=True,
+    max_iterations=15,
+    handle_parsing_errors=True
+)
