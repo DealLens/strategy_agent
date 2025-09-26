@@ -26,22 +26,62 @@ prompt = ChatPromptTemplate.from_messages([
 # 환경변수에서 불러오기
 AOAI_ENDPOINT = os.getenv("AOAI_ENDPOINT")
 AOAI_API_KEY = os.getenv("AOAI_API_KEY")
-AOAI_DEPLOY_GPT4O = os.getenv("AOAI_DEPLOY_GPT4O")
+AOAI_DEPLOY_GPT4O = os.getenv("AOAI_DEPLOY_GPT4O", "gpt-4o")
 AOAI_API_VERSION = os.getenv("AOAI_API_VERSION", "2024-05-01-preview")
 
-llm = AzureChatOpenAI(
-    azure_endpoint=AOAI_ENDPOINT,
-    azure_deployment=AOAI_DEPLOY_GPT4O,
-    api_version=AOAI_API_VERSION,
-    api_key=AOAI_API_KEY,
-)
+# OpenAI API 키도 확인
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-agent = create_tool_calling_agent(llm, tools, prompt)
+# API 키가 있는지 확인하고 적절한 LLM 초기화
+try:
+    if AOAI_API_KEY and AOAI_ENDPOINT:
+        # Azure OpenAI 사용
+        llm = AzureChatOpenAI(
+            azure_endpoint=AOAI_ENDPOINT,
+            azure_deployment=AOAI_DEPLOY_GPT4O,
+            api_version=AOAI_API_VERSION,
+            api_key=AOAI_API_KEY,
+        )
+        print("✅ Azure OpenAI 사용")
+    elif OPENAI_API_KEY:
+        # OpenAI 사용
+        from langchain_openai import ChatOpenAI
+        llm = ChatOpenAI(
+            api_key=OPENAI_API_KEY,
+            model="gpt-4o-mini",
+            temperature=0.1
+        )
+        print("✅ OpenAI 사용")
+    else:
+        # API 키가 없는 경우 더미 LLM 사용
+        print("⚠️ API 키가 없어서 더미 모드로 동작합니다")
+        llm = None
+except Exception as e:
+    print(f"⚠️ LLM 초기화 실패: {e}")
+    print("더미 모드로 동작합니다")
+    llm = None
 
-supervisor = AgentExecutor(
-    agent=agent,
-    tools=tools,
-    verbose=True,
-    max_iterations=15,
-    handle_parsing_errors=True
-)
+# LLM이 있는 경우에만 agent 생성
+if llm:
+    agent = create_tool_calling_agent(llm, tools, prompt)
+    
+    supervisor = AgentExecutor(
+        agent=agent,
+        tools=tools,
+        verbose=True,
+        max_iterations=15,
+        handle_parsing_errors=True
+    )
+else:
+    # 더미 모드에서는 간단한 더미 supervisor 생성
+    class DummySupervisor:
+        def __init__(self):
+            self.tools = tools
+            
+        def invoke(self, input_data):
+            return {
+                "output": "⚠️ API 키가 설정되지 않아 더미 모드로 동작합니다. 실제 분석을 위해서는 API 키를 설정해주세요.",
+                "intermediate_steps": []
+            }
+    
+    supervisor = DummySupervisor()
