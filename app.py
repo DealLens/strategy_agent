@@ -26,6 +26,10 @@ with st.sidebar:
 
 # 메인 콘텐츠 영역
 if run_button and uploaded_file:
+    # PDF 저장을 위한 디렉토리 생성
+    import os
+    os.makedirs("data/samples", exist_ok=True)
+    
     # PDF 저장
     pdf_path = f"data/samples/{uploaded_file.name}"
     with open(pdf_path, "wb") as f:
