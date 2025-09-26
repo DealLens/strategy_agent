@@ -1,4 +1,10 @@
 import streamlit as st
+from dotenv import load_dotenv
+import os
+
+# ✅ 환경변수 로드 (맨 위에서 실행 1번만 해주면 됨)
+load_dotenv()
+
 from workflow.supervisor import supervisor
 
 # 페이지 설정
@@ -27,7 +33,6 @@ with st.sidebar:
 # 메인 콘텐츠 영역
 if run_button and uploaded_file:
     # PDF 저장을 위한 디렉토리 생성
-    import os
     os.makedirs("data/samples", exist_ok=True)
     
     # PDF 저장
@@ -52,15 +57,15 @@ if run_button and uploaded_file:
 
     with tab1:
         st.write("🔹 요구사항 및 평가 기준 상세 내용")
-        # 예시: st.json(result["sections"].get("요구사항", {}))
+        # st.json(result["sections"].get("요구사항", {}))
 
     with tab2:
         st.write("🏢 경쟁사 SWOT 분석")
-        # 예시: st.json(result["sections"].get("경쟁사", {}))
+        # st.json(result["sections"].get("경쟁사", {}))
 
     with tab3:
         st.write("🎯 전략 제안 / 보완책")
-        # 예시: st.json(result["sections"].get("전략", {}))
+        # st.json(result["sections"].get("전략", {}))
 
 else:
     st.info("좌측 사이드바에서 📄 PDF를 업로드하고 경쟁사를 선택한 후 '🔍 분석 실행'을 눌러주세요.")

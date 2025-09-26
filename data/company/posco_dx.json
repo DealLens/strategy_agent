@@ -1,0 +1,26 @@
+[
+  {
+    "title": "포스코DX, 제조업 AI 솔루션 개발",
+    "url": "http://example.com/posco1",
+    "description": "포스코DX가 제조업 특화 AI 솔루션을 개발하여 스마트 제조 혁신을 추진한다.",
+    "source": "제조 뉴스",
+    "company": "포스코DX",
+    "crawled_at": "2025-09-22T10:00:00"
+  },
+  {
+    "title": "포스코DX, 스마트팩토리 플랫폼 구축",
+    "url": "http://example.com/posco2",
+    "description": "제조업체를 대상으로 한 스마트팩토리 통합 플랫폼 구축 프로젝트를 진행한다.",
+    "source": "산업 뉴스",
+    "company": "포스코DX",
+    "crawled_at": "2025-09-22T10:01:00"
+  },
+  {
+    "title": "포스코DX, 디지털 트윈 기술 개발",
+    "url": "http://example.com/posco3",
+    "description": "제조 공정 최적화를 위한 디지털 트윈 기술을 개발하여 제조 효율성을 향상시킨다.",
+    "source": "기술 뉴스",
+    "company": "포스코DX",
+    "crawled_at": "2025-09-22T10:02:00"
+  }
+]

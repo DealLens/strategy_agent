@@ -1,12 +1,14 @@
 from langchain_core.tools import tool
+from typing import Dict, Any, Optional
+
 
 @tool
-def reporter(data: dict) -> dict:
+def reporter(data: Optional[Dict[str, Any]] = None) -> dict:
     """
     최종 보고서 요약 및 브리핑을 생성합니다.
     
     Args:
-        data (dict): Supervisor가 모은 A~D 단계 결과
+        data (dict, optional): Supervisor가 모은 A~D 단계 결과
             {
                 "requirements": [...],
                 "evaluation": [...],
@@ -15,13 +17,14 @@ def reporter(data: dict) -> dict:
                 "competitor_profiles": {...},
                 "strategy": {...}
             }
-    
+
     Returns:
         dict: {
             "deal_brief": str,   # 1~2p 요약 브리핑
             "sections": dict     # 상세 섹션 (요구사항/리스크/전략/경쟁사)
         }
     """
+    data = data or {}
 
     requirements = data.get("requirements", [])
     evaluation = data.get("evaluation", [])
