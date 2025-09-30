@@ -3,7 +3,7 @@ import os
 from langchain_core.tools import tool
 from typing import List, Dict, Any
 
-# 내부 데이터 경로 (환경에 맞게 수정 가능)
+# 내부 데이터 경로
 DATA_PATH = r"C:\GIT\strategy_agent\data\internal\skax_case_studies.json"
 
 
@@ -19,11 +19,15 @@ def internal_rag(requirements: List[str]) -> Dict[str, Any]:
     Returns:
         dict: {
             "internal_matches": [
-                {"requirement": str, "related": [프로젝트명 리스트]}
+                {
+                    "requirement": str,
+                    "matches": [
+                        {"title": str, "summary": str, "url": str}
+                    ]
+                }
             ]
         }
     """
-    # 데이터 파일 확인
     if not os.path.exists(DATA_PATH):
         return {"error": f"데이터 파일을 찾을 수 없음: {DATA_PATH}"}
 
@@ -39,19 +43,25 @@ def internal_rag(requirements: List[str]) -> Dict[str, Any]:
         for case in cases:
             capabilities = case.get("capabilities", [])
             if any(req.lower() in cap.lower() for cap in capabilities):
-                related_projects.append(case.get("title", "제목 없음"))
+                related_projects.append({
+                    "title": case.get("title", "제목 없음"),
+                    "summary": case.get("summary", case.get("content", "")[:150] + "..."),
+                    "url": case.get("url", "")
+                })
         matches.append({
             "requirement": req,
-            "related": related_projects
+            "matches": related_projects
         })
 
     return {"internal_matches": matches}
 
 
-# 단독 실행 디버깅용
+# 디버깅용 실행
 if __name__ == "__main__":
-    sample_requirements = ["AI 성능 검증", "보안 인증", "SLA 99.9%"]
+    sample_requirements = ["AI 성능 검증", "보안 인증"]
     result = internal_rag.run(sample_requirements)
     print("📋 Internal RAG 결과:")
     for r in result.get("internal_matches", []):
-        print(f"- {r['requirement']}: {r.get('related', [])}")
+        print(f"요구사항: {r['requirement']}")
+        for m in r["matches"]:
+            print(f"   - {m['title']} | {m['summary']} | {m['url']}")
