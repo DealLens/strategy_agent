@@ -510,10 +510,21 @@ def competitor_analysis(companies: Optional[List[str]] = None) -> Dict[str, Any]
         try:
             with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-        except Exception:
+        except Exception as e:
+            print(f"Error loading {path}: {e}")
             continue
 
+        # data가 리스트인지 확인
+        if not isinstance(data, list):
+            print(f"Warning: {path}의 데이터가 리스트가 아닙니다: {type(data)}")
+            continue
+            
         for item in data:
+            # item이 딕셔너리인지 확인
+            if not isinstance(item, dict):
+                print(f"Warning: {path}의 item이 딕셔너리가 아닙니다: {type(item)}")
+                continue
+                
             comp = item.get("company")
             if not comp:
                 continue
