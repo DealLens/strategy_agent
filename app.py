@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit as st 
 from dotenv import load_dotenv
 import os
 
@@ -23,16 +23,14 @@ with st.sidebar:
     st.header("⚙️ 입력 설정")
     uploaded_file = st.file_uploader("📄 RFP PDF 업로드", type=["pdf"])
     
-    competitors = st.multiselect(
-        "🏢 경쟁사 선택",
-        ["삼성 SDS", "LG CNS", "포스코DX", "KT", "현대 오토에버", "카카오", "CJ 올리브네트웍스"]
-    )
+    # 경쟁사 선택은 제거하고 고정값 사용
+    competitors = ["삼성 SDS", "LG CNS", "현대 오토에버"]
     
     run_button = st.button("🔍 분석 실행", use_container_width=True)
 
 # 메인 콘텐츠 영역
 if run_button and uploaded_file:
-    # PDF 저장을 위한 디렉토리 생성
+    # PDF 저장 디렉토리 생성
     os.makedirs("data/samples", exist_ok=True)
     
     # PDF 저장
@@ -40,7 +38,8 @@ if run_button and uploaded_file:
     with open(pdf_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
 
-    query = f"RFP 파일: {pdf_path}\n경쟁사: {competitors}\n이 정보를 기반으로 전략 보고서를 생성해줘."
+    # 🔹 경쟁사 목록 고정
+    query = f"RFP 파일: {pdf_path}\n경쟁사: {', '.join(competitors)}\n이 정보를 기반으로 전략 보고서를 생성해줘."
 
     with st.spinner("⏳ 전략 보고서 생성 중..."):
         result = supervisor.invoke({"input": query})
@@ -53,19 +52,29 @@ if run_button and uploaded_file:
 
     # 상세 결과 (탭으로 구분)
     st.subheader("📑 상세 분석")
-    tab1, tab2, tab3 = st.tabs(["요구사항", "경쟁사 분석", "전략 제안"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(
+        ["요구사항", "내부 분석", "경쟁사 분석", "리스크", "전략 제안"]
+    )
 
     with tab1:
         st.write("🔹 요구사항 및 평가 기준 상세 내용")
-        # st.json(result["sections"].get("요구사항", {}))
+        st.json(result["sections"].get("요구사항", {}))
 
     with tab2:
-        st.write("🏢 경쟁사 SWOT 분석")
-        # st.json(result["sections"].get("경쟁사", {}))
+        st.write("🏗 내부 유사 사업 사례 (Top-3)")
+        st.json(result["sections"].get("내부분석", {}))
 
     with tab3:
+        st.write("🏢 경쟁사 SWOT 분석 (삼성 SDS, LG CNS, 현대 오토에버)")
+        st.json(result["sections"].get("경쟁사", {}))
+
+    with tab4:
+        st.write("⚠️ 잠재 리스크")
+        st.json(result["sections"].get("리스크", {}))
+
+    with tab5:
         st.write("🎯 전략 제안 / 보완책")
-        # st.json(result["sections"].get("전략", {}))
+        st.json(result["sections"].get("전략", {}))
 
 else:
-    st.info("좌측 사이드바에서 📄 PDF를 업로드하고 경쟁사를 선택한 후 '🔍 분석 실행'을 눌러주세요.")
+    st.info("좌측 사이드바에서 📄 PDF를 업로드한 후 '🔍 분석 실행'을 눌러주세요.")

@@ -73,6 +73,7 @@ KEYWORD_ALIASES = {
     "LG CNS": ["LG CNS", "엘지 CNS", "엘지씨엔에스", "LGCNS", "lg cns"],
 }
 
+
 def get_queries_for_company(company: str) -> List[str]:
     name = company.strip()
     if name in KEYWORD_ALIASES:
@@ -139,6 +140,7 @@ def deduplicate_by_title(
         existing_titles.append(t)
     return out
 
+
 def load_existing_articles(path: str) -> List[Dict[str, Any]]:
     if os.path.exists(path):
         try:
@@ -155,6 +157,7 @@ def save_articles(path: str, items: List[Dict[str, Any]]):
 
 def _slugify_company(company: str) -> str:
     return company.lower().replace(" ", "_")
+
 
 
 def _state_file_path(company: str) -> str:
@@ -493,6 +496,10 @@ def competitor_analysis(companies: Optional[List[str]] = None) -> Dict[str, Any]
     """
     if not COMPANY_DIR:
         return {"competitor_profiles": {}, "error": "COMPANY_DIR 없음"}
+
+    # ✅ 기본값: 3사만
+    if not companies:
+        companies = ["삼성 SDS", "LG CNS", "현대오토에버"]
 
     json_files = glob(os.path.join(COMPANY_DIR, "*.json"))
     if not json_files:
