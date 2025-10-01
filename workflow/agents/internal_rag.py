@@ -62,8 +62,10 @@ def internal_rag(requirements: List[str]) -> Dict[str, Any]:
 # 디버깅용 실행
 if __name__ == "__main__":
     sample_requirements = ["AI 성능 검증", "보안 인증"]
-    # @tool 데코레이터 때문에 .invoke()를 사용해야 함
+
+    # @tool 데코레이터 때문에 .invoke()로 실행해야 함
     result = internal_rag.invoke({"requirements": sample_requirements})
+
     print("📋 Internal RAG 결과:")
     for r in result.get("internal_matches", []):
         print(f"요구사항: {r['requirement']}")
