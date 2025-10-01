@@ -28,7 +28,6 @@ def _safe_parse_dt(dt_str: str) -> Optional[datetime]:
             return datetime.strptime(dt_str, fmt)
         except Exception:
             continue
-    # 마지막 시도: fromisoformat
     try:
         return datetime.fromisoformat(dt_str.replace("Z", ""))
     except Exception:
@@ -36,27 +35,17 @@ def _safe_parse_dt(dt_str: str) -> Optional[datetime]:
 
 
 def _canonical_company_name(file_path: str, record_company: Optional[str]) -> str:
-    # 파일명 기반 기본 회사명
     base = os.path.splitext(os.path.basename(file_path))[0]
     base = base.replace("_", " ").replace("-", " ").strip()
 
-    # 레코드가 회사명 주면 우선 사용
     cand = (record_company or "").strip()
     if cand:
         return cand
 
-    # 파일명 특수 매핑(선호 표기)
     mapping = {
         "samsung_sds": "삼성 SDS",
         "lgcns": "LG CNS",
-        "lgu": "LG유플러스",
-        "posco_dx": "포스코DX",
-        "kt": "KT",
         "hyundai": "현대오토에버",
-        "kakaoenterprise": "카카오엔터프라이즈",
-        "naver_cloud": "네이버클라우드",
-        "cj_olive": "CJ 올리브네트웍스",
-        "skax": "SK AX",
     }
     return mapping.get(base.lower(), base)
 
@@ -91,7 +80,6 @@ THREAT_HINTS = ["빅테크 진입", "가격 경쟁 심화", "규제 강화", "�
 
 
 def _extract_projects_and_strengths(item: Dict[str, Any]) -> (bool, Dict[str, int]):
-    """프로젝트성 기사 여부와 강점점수 부분집계."""
     text = " ".join([
         str(item.get("title", "")),
         str(item.get("description", "")),
@@ -99,7 +87,6 @@ def _extract_projects_and_strengths(item: Dict[str, Any]) -> (bool, Dict[str, in
     ])
     is_project = any(k in text for k in PROJECT_KEYWORDS)
 
-    # 강점 점수
     local_score = {}
     for label, kws in STRENGTH_KEYWORDS.items():
         score = sum(text.count(kw) for kw in kws)
@@ -134,10 +121,8 @@ def _rank_strengths(score: Dict[str, int], topn: int = 5) -> List[str]:
 
 
 def _generate_swot(strengths: List[str], news_texts: List[str]) -> Dict[str, str]:
-    # S: 상위 강점 2~3개를 문장화
     S = " · ".join(strengths[:3]) if strengths else "레퍼런스 기반 강점 파악 필요"
 
-    # W: 뉴스 텍스트에 약점 힌트가 보이면 반영
     W_hits = []
     all_text = " ".join(news_texts)
     for w_label, kws in WEAKNESS_HINTS.items():
@@ -145,7 +130,6 @@ def _generate_swot(strengths: List[str], news_texts: List[str]) -> Dict[str, str
             W_hits.append(w_label)
     W = " · ".join(W_hits) if W_hits else "민첩성/가격/인력 측면의 잠재 리스크"
 
-    # O/T: 고정 힌트(필요시 뉴스 기반 강화 가능)
     O = " · ".join(OPPORTUNITY_HINTS[:3])
     T = " · ".join(THREAT_HINTS[:3])
 
@@ -157,27 +141,14 @@ def _generate_swot(strengths: List[str], news_texts: List[str]) -> Dict[str, str
 @tool
 def competitor_analysis(companies: Optional[List[str]] = None) -> Dict[str, Any]:
     """
-    data/company/*.json 크롤링 결과를 취합하여
-    경쟁사별 강점/최근 프로젝트/최근 뉴스/자동 SWOT을 생성합니다.
-
-    Args:
-        companies (Optional[List[str]]): 특정 회사들만 필터링하고 싶을 때 사용.
-                                         None이면 디렉토리 모든 파일 사용.
-
-    Returns:
-        dict: {
-          "competitor_profiles": {
-            "<회사명>": {
-              "strengths": [..],
-              "recent_projects": [ {title,url,source,crawled_at}, ... ],
-              "recent_news":     [ {title,url,source,crawled_at}, ... ],
-              "swot": {"S": str, "W": str, "O": str, "T": str}
-            }, ...
-          }
-        }
+    삼성 SDS / LG CNS / 현대오토에버 3사만 분석.
     """
     if not COMPANY_DIR:
         return {"competitor_profiles": {}, "error": "company 데이터 디렉토리를 찾을 수 없습니다."}
+
+    # ✅ 기본값: 3사만
+    if not companies:
+        companies = ["삼성 SDS", "LG CNS", "현대오토에버"]
 
     json_files = glob(os.path.join(COMPANY_DIR, "*.json"))
     if not json_files:
@@ -189,40 +160,36 @@ def competitor_analysis(companies: Optional[List[str]] = None) -> Dict[str, Any]
         try:
             with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-        except Exception as e:
-            # 파일 단위 에러는 스킵하고 계속
+        except Exception:
             continue
 
-        # 파일 내부가 리스트/딕셔너리 양쪽 모두 대응
         items = data if isinstance(data, list) else data.get("items", [])
         if not isinstance(items, list):
             continue
 
-        # 파일명 또는 레코드에서 회사명 추출
         for item in items:
             comp_name = _canonical_company_name(path, item.get("company"))
-            if companies and comp_name not in companies:
+
+            # ✅ 3사만 필터링
+            if comp_name not in companies:
                 continue
 
-            # 프로필 초기화
             p = profiles.setdefault(comp_name, {
                 "strengths": [],
                 "recent_projects_raw": [],
                 "recent_news_raw": [],
             })
 
-            # 프로젝트성 기사 여부 + 강점 점수 반영
             is_project, local_score = _extract_projects_and_strengths(item)
             if is_project:
                 p["recent_projects_raw"].append(item)
             p["recent_news_raw"].append(item)
 
-            # 강점 점수 누적
             score_map = p.setdefault("_strength_score", {})
             for k, v in local_score.items():
                 score_map[k] = score_map.get(k, 0) + v
 
-    # 후처리: 상위 강점/뉴스 정렬/프로젝트 정렬/SWOT 생성
+    # 후처리
     for comp, p in profiles.items():
         strengths = _rank_strengths(p.get("_strength_score", {}), topn=5)
         news = _to_recent_list(p.get("recent_news_raw", []), topn=5)
@@ -243,8 +210,7 @@ def competitor_analysis(companies: Optional[List[str]] = None) -> Dict[str, Any]
 
 # --- 단독 실행 디버깅 ---
 if __name__ == "__main__":
-    # 특정 회사만 보고 싶으면 리스트로 전달: ["삼성 SDS", "LG CNS"]
-    result = competitor_analysis.invoke({})
+    result = competitor_analysis()  # 기본값: 삼성/LG/현대 3사
     profiles = result.get("competitor_profiles", {})
 
     print(f"총 {len(profiles)}개 회사 정리")

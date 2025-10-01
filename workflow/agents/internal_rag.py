@@ -11,7 +11,7 @@ DATA_PATH = r"C:\GIT\strategy_agent\data\internal\skax_case_studies.json"
 def internal_rag(requirements: List[str]) -> Dict[str, Any]:
     """
     내부 데이터(skax_case_studies.json)를 불러와
-    요구사항별 매칭 결과를 반환합니다.
+    요구사항별 매칭 결과 (Top-3)를 반환합니다.
 
     Args:
         requirements (List[str]): RFP에서 추출된 요구사항 리스트
@@ -48,6 +48,9 @@ def internal_rag(requirements: List[str]) -> Dict[str, Any]:
                     "summary": case.get("summary", case.get("content", "")[:150] + "..."),
                     "url": case.get("url", "")
                 })
+        # 🔹 Top-3만 선택
+        related_projects = related_projects[:3]
+
         matches.append({
             "requirement": req,
             "matches": related_projects
@@ -59,7 +62,8 @@ def internal_rag(requirements: List[str]) -> Dict[str, Any]:
 # 디버깅용 실행
 if __name__ == "__main__":
     sample_requirements = ["AI 성능 검증", "보안 인증"]
-    result = internal_rag.run(sample_requirements)
+    # @tool 데코레이터 때문에 .invoke()를 사용해야 함
+    result = internal_rag.invoke({"requirements": sample_requirements})
     print("📋 Internal RAG 결과:")
     for r in result.get("internal_matches", []):
         print(f"요구사항: {r['requirement']}")
