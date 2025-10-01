@@ -471,48 +471,6 @@ def competitor_analysis(update_data: bool = True) -> Dict[str, Any]:
     Returns:
         각 경쟁사의 company_summary, swot, recent_news 포함
     """
-<<<<<<< Updated upstream
-    if not COMPANY_DIR:
-        return {"competitor_profiles": {}, "error": "COMPANY_DIR 없음"}
-
-    # ✅ 기본값: 3사만
-    if not companies:
-        companies = ["삼성 SDS", "LG CNS", "현대오토에버"]
-
-    json_files = glob(os.path.join(COMPANY_DIR, "*.json"))
-    if not json_files:
-        return {"competitor_profiles": {}, "error": f"JSON 파일이 없습니다: {COMPANY_DIR}"}
-
-    profiles: Dict[str, Dict[str, Any]] = {}
-    for path in json_files:
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-        except Exception as e:
-            print(f"Error loading {path}: {e}")
-            continue
-
-        # data가 리스트인지 확인
-        if not isinstance(data, list):
-            print(f"Warning: {path}의 데이터가 리스트가 아닙니다: {type(data)}")
-            continue
-            
-        for item in data:
-            # item이 딕셔너리인지 확인
-            if not isinstance(item, dict):
-                print(f"Warning: {path}의 item이 딕셔너리가 아닙니다: {type(item)}")
-                continue
-                
-            comp = item.get("company")
-            if not comp:
-                continue
-            if companies and comp not in companies:
-                continue
-            p = profiles.setdefault(comp, {
-                "recent_news": [],
-                "summaries": [],
-                "swot": {"S": "TBD", "W": "TBD", "O": "TBD", "T": "TBD"},
-=======
     print(f"\n{'='*60}")
     print(f"경쟁사 분석 시작 (3사)")
     print(f"{'='*60}\n")
@@ -565,7 +523,6 @@ def competitor_analysis(update_data: bool = True) -> Dict[str, Any]:
                 "url": article.get("url", ""),  # 🆕 링크 포함
                 "source": article.get("source", ""),
                 "summary": article.get("summary", "")
->>>>>>> Stashed changes
             })
         
         profiles[company] = {
