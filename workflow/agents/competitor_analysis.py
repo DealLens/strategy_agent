@@ -1,10 +1,14 @@
 import os
 import json
+import re
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 from typing import List, Dict, Any
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from langchain_core.tools import tool
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # =========================
 # 초기화
@@ -32,9 +36,73 @@ try:
 except:
     pass
 
+# 모드/설정 토글
+FAST_MODE = os.getenv("FAST_MODE", "1") == "1"
+SUMMARIZE_TOPK = int(os.getenv("SUMMARIZE_TOPK", "10" if FAST_MODE else "30"))
+MAX_PER_SOURCE = int(os.getenv("MAX_PER_SOURCE", "8" if FAST_MODE else "20"))
+CACHE_TTL = int(os.getenv("CACHE_TTL", "600" if FAST_MODE else "0"))
+
+# HTTP 캐시 (선택)
+try:
+    if CACHE_TTL > 0:
+        import requests_cache
+        cache_path = os.path.join(PROJECT_ROOT, "data", "http_cache")
+        os.makedirs(cache_path, exist_ok=True)
+        requests_cache.install_cache(cache_path, expire_after=CACHE_TTL)
+except:
+    pass
+
+# 전역 세션 구성
+SESSION = requests.Session()
+retry_config = Retry(
+    total=3,
+    connect=3,
+    read=3,
+    backoff_factor=0.4,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["GET", "HEAD"],
+)
+adapter = HTTPAdapter(pool_connections=30, pool_maxsize=30, max_retries=retry_config)
+SESSION.mount("https://", adapter)
+SESSION.mount("http://", adapter)
+SESSION.headers.update({
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "ko,en;q=0.9",
+})
+
+
+def GET(url: str, timeout=(3, 8)):
+    return SESSION.get(url, timeout=timeout)
+
 # 저장 경로
 COMPANY_DIR = os.path.join(PROJECT_ROOT, "data", "company")
 os.makedirs(COMPANY_DIR, exist_ok=True)
+
+__all__ = [
+    "FAST_MODE",
+    "SUMMARIZE_TOPK",
+    "MAX_PER_SOURCE",
+    "CACHE_TTL",
+    "COMPANY_DIR",
+    "COMPETITORS",
+    "GET",
+    "crawl_daum_news",
+    "crawl_naver_news",
+    "crawl_google_news",
+    "crawl_all_sources",
+    "extract_key_technologies",
+    "extract_differentiation_points",
+    "generate_article_summary",
+    "generate_company_summary",
+    "generate_swot",
+    "generate_competitive_comparison",
+    "normalize_title",
+    "deduplicate_articles",
+    "save_articles",
+    "load_articles",
+    "competitor_analysis",
+]
 
 # 3사 고정
 COMPETITORS = ["삼성SDS", "LG CNS", "현대오토에버"]
@@ -47,20 +115,17 @@ def crawl_daum_news(company: str, max_results: int = 20) -> List[Dict[str, Any]]
     try:
         query = company.replace(" ", "+")
         url = f"https://search.daum.net/search?w=news&q={query}"
-        
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-        response = requests.get(url, headers=headers, timeout=10)
-        
+        response = GET(url)
         if response.status_code != 200:
             return []
-        
-        soup = BeautifulSoup(response.text, "html.parser")
+
+        soup = BeautifulSoup(response.text, "lxml")
         articles = []
-        
+
         for link in soup.select("a[href*='v.daum.net']")[:max_results]:
             title = link.get("title") or link.get_text(strip=True)
             href = link.get("href", "")
-            
+
             if title and href and "v.daum.net" in href:
                 articles.append({
                     "title": title,
@@ -80,21 +145,18 @@ def crawl_naver_news(company: str, max_results: int = 20) -> List[Dict[str, Any]
     try:
         query = company.replace(" ", "+")
         url = f"https://search.naver.com/search.naver?where=news&query={query}"
-        
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-        response = requests.get(url, headers=headers, timeout=10)
-        
+        response = GET(url)
         if response.status_code != 200:
             return []
-        
-        soup = BeautifulSoup(response.text, "html.parser")
+
+        soup = BeautifulSoup(response.text, "lxml")
         articles = []
-        
+
         # 네이버 뉴스 링크 찾기
         for link in soup.select("a.news_tit, a[href*='news.naver']")[:max_results]:
             title = link.get("title") or link.get_text(strip=True)
             href = link.get("href", "")
-            
+
             if title and href and "news.naver.com" in href:
                 articles.append({
                     "title": title,
@@ -117,24 +179,21 @@ def crawl_google_news(company: str, max_results: int = 20) -> List[Dict[str, Any
     try:
         query = company.replace(" ", "+")
         url = f"https://www.google.com/search?q={query}&tbm=nws&hl=ko"
-        
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-        response = requests.get(url, headers=headers, timeout=10)
-        
+        response = GET(url)
         if response.status_code != 200:
             return []
-        
-        soup = BeautifulSoup(response.text, "html.parser")
+
+        soup = BeautifulSoup(response.text, "lxml")
         articles = []
-        
+
         for card in soup.select("div.SoaBEf, div.dbsr")[:max_results]:
             link = card.find("a", href=True)
             if not link:
                 continue
-                
+
             title_tag = card.find("div", class_="n0jPhd") or card.find("div", class_="JheGif")
             title = title_tag.get_text(strip=True) if title_tag else link.get_text(strip=True)
-            
+
             if title and len(title) > 10:
                 articles.append({
                     "title": title,
@@ -154,8 +213,6 @@ def crawl_all_sources(company: str, max_per_source: int = 15, use_parallel: bool
     
     if use_parallel:
         # 병렬 처리
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-        
         all_articles = []
         tasks = [
             ("다음", crawl_daum_news),
@@ -386,31 +443,51 @@ def generate_competitive_comparison(profiles: Dict[str, Dict]) -> str:
 # =========================
 # 데이터 저장/로드
 # =========================
-def deduplicate_articles(articles: List[Dict], existing: List[Dict], threshold: float = 0.85) -> List[Dict]:
-    """고급 중복 제거 (유사도 기반)"""
-    from difflib import SequenceMatcher
-    
-    existing_titles = [a.get("title", "") for a in existing]
-    new_articles = []
-    
+def normalize_title(text: str) -> str:
+    return re.sub(r"\W+", "", (text or "").lower())
+
+
+def deduplicate_articles(articles: List[Dict], existing: List[Dict], threshold: float = 0.92) -> List[Dict]:
+    """빠른 중복 제거 (유사도는 후보에만 적용)"""
+    seen_titles = {normalize_title(a.get("title", "")) for a in existing}
+    seen_urls = {a.get("url", "") for a in existing}
+    uniques = []
+    candidates = []
+
     for article in articles:
         title = article.get("title", "")
-        if not title:
+        t_norm = normalize_title(title)
+        url = article.get("url", "")
+
+        if not t_norm:
             continue
-        
-        # 유사도 체크
-        is_duplicate = False
-        for existing_title in existing_titles:
-            similarity = SequenceMatcher(None, title, existing_title).ratio()
-            if similarity >= threshold:
-                is_duplicate = True
-                break
-        
-        if not is_duplicate:
-            new_articles.append(article)
+        if t_norm in seen_titles:
+            continue
+        if url and url in seen_urls:
+            continue
+
+        if len(t_norm) > 20:
+            uniques.append(article)
+            seen_titles.add(t_norm)
+            if url:
+                seen_urls.add(url)
+        else:
+            candidates.append(article)
+
+    if candidates:
+        from difflib import SequenceMatcher
+
+        existing_titles = [a.get("title", "") for a in existing] + [u.get("title", "") for u in uniques]
+        for article in candidates:
+            title = article.get("title", "")
+            if not title:
+                continue
+            if any(SequenceMatcher(None, title, e_title).ratio() >= threshold for e_title in existing_titles):
+                continue
+            uniques.append(article)
             existing_titles.append(title)
-    
-    return new_articles
+
+    return uniques
 
 
 def save_articles(company: str, articles: List[Dict]):
@@ -427,7 +504,7 @@ def save_articles(company: str, articles: List[Dict]):
             pass
     
     # 고급 중복 제거 (유사도 기반)
-    new_articles = deduplicate_articles(articles, existing, threshold=0.85)
+    new_articles = deduplicate_articles(articles, existing)
     
     # 합치고 저장
     combined = new_articles + existing
@@ -476,65 +553,97 @@ def competitor_analysis(update_data: bool = True) -> Dict[str, Any]:
     print(f"{'='*60}\n")
     
     # 1) 데이터 수집 (병렬 처리)
-    if update_data:
-        print("[1/3] 최신 뉴스 크롤링 (다음/네이버/구글, 병렬 처리)...")
-        for company in COMPETITORS:
-            print(f"  → {company}")
-            articles = crawl_all_sources(company, max_per_source=15, use_parallel=True)
-            
-            print(f"    → 총 {len(articles)}개 수집, 요약 생성 중...", end=" ")
-            
-            # 요약 생성 (병렬)
-            from concurrent.futures import ThreadPoolExecutor
-            
-            def add_summary(article):
-                article["summary"] = generate_article_summary(article["title"], company)
-                return article
-            
-            with ThreadPoolExecutor(max_workers=5) as executor:
-                articles = list(executor.map(add_summary, articles))
-            
-            summarized_count = sum(1 for a in articles if a.get('summary'))
-            print(f"{summarized_count}개 완료")
-            
+    def process_company(company: str, update_data_local: bool) -> Dict[str, Any]:
+        print(f"  → {company}")
+        articles = []
+
+        if update_data_local:
+            crawled = crawl_all_sources(company, max_per_source=MAX_PER_SOURCE, use_parallel=True)
+            print(f"    → 총 {len(crawled)}개 수집")
+
+            existing_articles = load_articles(company)
+            existing_map = {normalize_title(a.get("title", "")): a for a in existing_articles}
+
+            to_summarize = []
+            summarized = []
+
+            for article in crawled:
+                title_key = normalize_title(article.get("title", ""))
+                existing = existing_map.get(title_key)
+                if existing and existing.get("summary"):
+                    article["summary"] = existing.get("summary")
+                    summarized.append(article)
+                else:
+                    to_summarize.append(article)
+
+            if to_summarize and client:
+                limit = min(len(to_summarize), SUMMARIZE_TOPK)
+                need_summary = to_summarize[:limit]
+                remaining = to_summarize[limit:]
+
+                def add_summary(article):
+                    article["summary"] = generate_article_summary(article["title"], company)
+                    return article
+
+                with ThreadPoolExecutor(max_workers=4) as executor:
+                    summarized.extend(executor.map(add_summary, need_summary))
+
+                summarized.extend(remaining)
+            else:
+                summarized.extend(to_summarize)
+
+            articles = summarized
             save_articles(company, articles)
-    else:
-        print("[1/3] 기존 데이터 사용 (크롤링 스킵)")
-    
-    # 2) 분석
-    print("\n[2/3] 데이터 분석 중...")
-    profiles = {}
-    
-    for company in COMPETITORS:
-        articles = load_articles(company)
-        
+        else:
+            print("    → 이전 저장 데이터 사용")
+            articles = load_articles(company)
+
         if not articles:
             print(f"  ⚠️ {company}: 데이터 없음")
-            continue
-        
-        # SWOT 생성
+            return {}
+
         swot = generate_swot(company, articles)
-        
-        # 최신 뉴스 5개 (링크 포함)
-        recent_news = []
-        for article in articles[:5]:
-            recent_news.append({
-                "title": article.get("title", ""),
-                "url": article.get("url", ""),  # 🆕 링크 포함
-                "source": article.get("source", ""),
-                "summary": article.get("summary", "")
-            })
-        
-        profiles[company] = {
+        recent_news = [{
+            "title": article.get("title", ""),
+            "url": article.get("url", ""),
+            "source": article.get("source", ""),
+            "summary": article.get("summary", "")
+        } for article in articles[:5]]
+
+        profile = {
             "recent_news": recent_news,
             "company_summary": generate_company_summary(company, articles),
             "swot": swot,
-            "key_technologies": extract_key_technologies(articles),  # 🆕 기술 분석
-            "differentiation_points": extract_differentiation_points(company, swot),  # 🆕 차별화 포인트
+            "key_technologies": extract_key_technologies(articles),
+            "differentiation_points": extract_differentiation_points(company, swot),
             "total_articles": len(articles)
         }
-        
+
         print(f"  ✅ {company}: {len(articles)}개 기사 분석 완료")
+        return profile
+
+    if update_data:
+        print("[1/3] 최신 뉴스 크롤링 (다음/네이버/구글, 병렬 처리)...")
+    else:
+        print("[1/3] 기존 데이터 사용 (크롤링 스킵)")
+
+    print("\n[2/3] 데이터 분석 중...")
+    profiles = {}
+
+    with ThreadPoolExecutor(max_workers=len(COMPETITORS)) as executor:
+        futures = {
+            executor.submit(process_company, company, update_data): company
+            for company in COMPETITORS
+        }
+
+        for future in as_completed(futures):
+            company = futures[future]
+            try:
+                profile = future.result()
+                if profile:
+                    profiles[company] = profile
+            except Exception as exc:
+                print(f"  ⚠️ {company}: 처리 실패 ({exc})")
     
     # 3) 경쟁 분석 요약
     print("\n[3/3] 경쟁 분석 요약 생성...")
