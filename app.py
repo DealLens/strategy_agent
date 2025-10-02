@@ -698,10 +698,21 @@ def render_analysis_detail():
                 with st.expander("④ 전략 도출 결과", expanded=True):
                     if results and 'strategy' in results:
                         strategy_data = results['strategy'].get('strategy', {})
+                        
+                        if strategy_data.get('summary'):
+                            st.markdown("### 💡 AI 전략 요약")
+                            st.info(strategy_data['summary'])
+                            st.markdown("---")
+                        
                         if strategy_data.get('actions'):
                             st.markdown("**🎯 액션 플랜:**")
                             for action in strategy_data['actions']:
                                 st.markdown(f"- {action}")
+                        
+                        if strategy_data.get('differentiation'):
+                            st.markdown("\n**✨ 차별화 포인트:**")
+                            for diff in strategy_data['differentiation']:
+                                st.markdown(f"- {diff}")
                     else:
                         st.info("분석 결과가 없습니다.")
                 
@@ -943,6 +954,12 @@ def render_strategy_report():
         with st.expander("④ 전략 도출 결과", expanded=True):
             if results and 'strategy' in results and not results.get('error'):
                 strategy_data = results['strategy'].get('strategy', {})
+                
+                # 전략 요약 (AI가 생성)
+                if strategy_data.get('summary'):
+                    st.markdown("### 💡 AI 전략 요약")
+                    st.info(strategy_data['summary'])
+                    st.markdown("---")
                 
                 # 액션 플랜
                 if strategy_data.get('actions'):

@@ -16,21 +16,14 @@ try:
 except:
     PROJECT_ROOT = os.getcwd()
 
-# OpenAI 클라이언트
-client = None
-try:
-    if os.getenv("AOAI_ENDPOINT") and os.getenv("AOAI_API_KEY"):
-        from openai import AzureOpenAI
-        client = AzureOpenAI(
-            api_key=os.getenv("AOAI_API_KEY"),
-            api_version="2024-02-15-preview",
-            azure_endpoint=os.getenv("AOAI_ENDPOINT"),
-        )
-    elif os.getenv("OPENAI_API_KEY"):
-        from openai import OpenAI
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-except:
-    pass
+# =========================
+# 통합 LLM 클라이언트 사용
+# =========================
+import sys
+sys.path.append(PROJECT_ROOT)
+from utils.llm_client import get_llm_client, is_llm_available, call_llm, parse_json_response
+
+llm_client = get_llm_client()
 
 # 저장 경로
 COMPANY_DIR = os.path.join(PROJECT_ROOT, "data", "company")
@@ -260,26 +253,21 @@ def extract_differentiation_points(company: str, swot: Dict) -> List[str]:
 # =========================
 def generate_article_summary(title: str, company: str) -> str:
     """개별 기사 요약"""
-    if not client or not title:
+    if not is_llm_available() or not title:
         return ""
     
     try:
         prompt = f"{company} 관련 뉴스 제목: '{title}'\n이 뉴스의 핵심을 2-3문장으로 요약해주세요."
         
-        model = os.getenv("AOAI_DEPLOY_GPT4O_MINI", "gpt-4o-mini")
-        response = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-        )
-        return response.choices[0].message.content.strip()
+        result = call_llm(prompt, temperature=0.3, use_secondary=True)
+        return result or ""
     except:
         return ""
 
 
 def generate_company_summary(company: str, articles: List[Dict]) -> str:
     """기업 전체 종합 서머리"""
-    if not client or not articles:
+    if not is_llm_available() or not articles:
         return f"{company}의 최근 활동 정보가 부족합니다."
     
     try:
@@ -293,20 +281,15 @@ def generate_company_summary(company: str, articles: List[Dict]) -> str:
 전략 컨설턴트 관점에서 5-7문장으로 종합 요약해주세요.
 """
         
-        model = os.getenv("AOAI_DEPLOY_GPT4O_MINI", "gpt-4o-mini")
-        response = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-        )
-        return response.choices[0].message.content.strip()
+        result = call_llm(prompt, temperature=0.3, use_secondary=True)
+        return result or f"{company}는 다양한 IT 서비스 분야에서 활동 중입니다."
     except:
         return f"{company}는 다양한 IT 서비스 분야에서 활동 중입니다."
 
 
 def generate_swot(company: str, articles: List[Dict]) -> Dict[str, List[str]]:
-    """SWOT 분석 생성"""
-    if not client or not articles:
+    """SWOT 분석 생성 (개선된 JSON 파싱)"""
+    if not is_llm_available() or not articles:
         return {"S": ["정보 부족"], "W": ["정보 부족"], "O": ["정보 부족"], "T": ["정보 부족"]}
     
     try:
@@ -316,29 +299,24 @@ def generate_swot(company: str, articles: List[Dict]) -> Dict[str, List[str]]:
 {company}의 최근 뉴스:
 {news_list}
 
-위 뉴스를 바탕으로 SWOT 분석을 수행하고, 다음 JSON 형식으로 답변해주세요:
+위 뉴스를 바탕으로 SWOT 분석을 수행하고, 반드시 다음 JSON 형식으로 답변해주세요:
 {{
   "S": ["강점1", "강점2"],
   "W": ["약점1", "약점2"],
   "O": ["기회1", "기회2"],
   "T": ["위협1", "위협2"]
 }}
+
+중요: JSON 형식만 반환하고 다른 설명은 추가하지 마세요.
 """
         
-        model = os.getenv("AOAI_DEPLOY_GPT4O_MINI", "gpt-4o-mini")
-        response = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-        )
+        result = call_llm(prompt, temperature=0.3, use_secondary=True)
         
-        result = response.choices[0].message.content.strip()
-        
-        # JSON 추출
-        import re
-        json_match = re.search(r'\{[\s\S]*\}', result)
-        if json_match:
-            return json.loads(json_match.group())
+        if result:
+            # 개선된 JSON 파싱 로직 사용
+            swot_data = parse_json_response(result)
+            if swot_data and _validate_swot_data(swot_data):
+                return swot_data
     except:
         pass
     
@@ -351,9 +329,15 @@ def generate_swot(company: str, articles: List[Dict]) -> Dict[str, List[str]]:
     }
 
 
+def _validate_swot_data(data: Dict[str, Any]) -> bool:
+    """SWOT 데이터 유효성 검증"""
+    required_keys = ["S", "W", "O", "T"]
+    return all(key in data and isinstance(data[key], list) for key in required_keys)
+
+
 def generate_competitive_comparison(profiles: Dict[str, Dict]) -> str:
     """경쟁사 간 비교 분석"""
-    if not client or len(profiles) < 2:
+    if not is_llm_available() or len(profiles) < 2:
         return ""
     
     try:
@@ -371,14 +355,8 @@ def generate_competitive_comparison(profiles: Dict[str, Dict]) -> str:
 이들을 비교하여 각 회사의 차별화 포인트와 경쟁 우위를 3-4문장으로 요약해주세요.
 """
         
-        model = os.getenv("AOAI_DEPLOY_GPT4O_MINI", "gpt-4o-mini")
-        response = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-        )
-        
-        return response.choices[0].message.content.strip()
+        result = call_llm(prompt, temperature=0.3, use_secondary=True)
+        return result or ""
     except:
         return ""
 
