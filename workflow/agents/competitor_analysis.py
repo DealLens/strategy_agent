@@ -4,7 +4,7 @@ import re
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from langchain_core.tools import tool
 from requests.adapters import HTTPAdapter
@@ -321,7 +321,7 @@ def generate_article_summary(title: str, company: str) -> str:
         return ""
     
     try:
-        prompt = f"{company} 관련 뉴스 제목: '{title}'\n이 뉴스의 핵심을 2-3문장으로 요약해주세요."
+        prompt = f"{company} 관련 뉴스 제목: '{title}'\n이 뉴스의 핵심을 2-3문장으로 요약해주세요. 내용을 확인할 수 없는 경우, 여러번 시도하여 주세요."
         
         model = os.getenv("AOAI_DEPLOY_GPT4O_MINI", "gpt-4o-mini")
         response = client.chat.completions.create(
@@ -346,8 +346,13 @@ def generate_company_summary(company: str, articles: List[Dict]) -> str:
 {company}의 최근 뉴스 제목들입니다:
 {news_list}
 
-이를 바탕으로 {company}의 현재 사업 동향, 기술 역량, 시장 위치를 
-전략 컨설턴트 관점에서 5-7문장으로 종합 요약해주세요.
+당신은 기업의 전략 컨설턴트 역할을 수행합니다.
+이를 바탕으로 {company}의 다음과 같은 역량들을 파악해주세요.
+현재 사업 동향, 기술 역량, 시장 위치를 종합적으로 서술주세요.
+결과물은 5-7문장 분량으로 해주세요.
+
+각 서술에 대한 뉴스 출처를 병기하여 근거를 밝히세요.
+뉴스에 적혀있지 않은 내용은 서술하지 마세요.
 """
         
         model = os.getenv("AOAI_DEPLOY_GPT4O_MINI", "gpt-4o-mini")
@@ -362,10 +367,16 @@ def generate_company_summary(company: str, articles: List[Dict]) -> str:
 
 
 def generate_swot(company: str, articles: List[Dict]) -> Dict[str, List[str]]:
-    """SWOT 분석 생성"""
-    if not client or not articles:
-        return {"S": ["정보 부족"], "W": ["정보 부족"], "O": ["정보 부족"], "T": ["정보 부족"]}
+    """SWOT 분석 생성 - 다단계 fallback 전략"""
     
+    # 1단계: 기본 검증
+    if not client:
+        return _create_fallback_swot(company, "LLM 클라이언트 초기화 실패")
+    
+    if not articles:
+        return _create_fallback_swot(company, "뉴스 데이터 부족")
+    
+    # 2단계: LLM API 호출 시도
     try:
         news_list = "\n".join([f"• {a['title']}" for a in articles[:10]])
         
@@ -373,13 +384,19 @@ def generate_swot(company: str, articles: List[Dict]) -> Dict[str, List[str]]:
 {company}의 최근 뉴스:
 {news_list}
 
-위 뉴스를 바탕으로 SWOT 분석을 수행하고, 다음 JSON 형식으로 답변해주세요:
+당신은 기업의 전략 컨설턴트 역할을 수행합니다.
+위 뉴스를 바탕으로 SWOT 분석을 수행해주세요.
+SWOT 분석이란 강점(S), 약점(W), 기회(O), 위협(T) 4가지 요소로 기업의 강점과 약점, 기회와 위협을 분석하는 것을 말합니다.
+
+다음 JSON 형식으로 답변해주세요:
 {{
-  "S": ["강점1", "강점2"],
-  "W": ["약점1", "약점2"],
-  "O": ["기회1", "기회2"],
-  "T": ["위협1", "위협2"]
+  "S": ["강점1", "강점2", ...],
+  "W": ["약점1", "약점2", ...],
+  "O": ["기회1", "기회2", ...],
+  "T": ["위협1", "위협2", ...]
 }}
+SWOT의 각 요소들에 대해 개수는 최대 5개로 제한해주세요.
+모든 요소들에 대해 근거를 함께 서술해 주세요.
 """
         
         model = os.getenv("AOAI_DEPLOY_GPT4O_MINI", "gpt-4o-mini")
@@ -391,21 +408,105 @@ def generate_swot(company: str, articles: List[Dict]) -> Dict[str, List[str]]:
         
         result = response.choices[0].message.content.strip()
         
-        # JSON 추출
+        # JSON 추출 및 검증
         import re
         json_match = re.search(r'\{[\s\S]*\}', result)
         if json_match:
-            return json.loads(json_match.group())
+            swot_data = json.loads(json_match.group())
+            # 3단계: 결과 검증
+            if _validate_swot_structure(swot_data):
+                return swot_data
+            else:
+                return _create_fallback_swot(company, "LLM 응답 형식 오류")
+        
+    except Exception as e:
+        # 4단계: 예외 발생 시 로깅
+        print(f"[SWOT 분석 실패] {company}: {str(e)}")
+    
+    # 5단계: 최종 fallback
+    return _create_fallback_swot(company, "LLM API 호출 실패")
+
+
+def _create_fallback_swot(company: str, error_reason: str) -> Dict[str, List[str]]:
+    """투명한 fallback SWOT 생성 - 기존 데이터 우선 활용"""
+    
+    # 1단계: 기존 저장된 데이터 확인
+    existing_swot = _load_existing_swot(company)
+    if existing_swot:
+        existing_swot["_fallback"] = True
+        existing_swot["_error"] = f"{error_reason} (기존 데이터 사용)"
+        existing_swot["_timestamp"] = datetime.now().isoformat()
+        return existing_swot
+    
+    # 2단계: 도메인별 기본 템플릿 활용
+    domain_swot = _get_domain_based_swot(company)
+    if domain_swot:
+        domain_swot["_fallback"] = True
+        domain_swot["_error"] = f"{error_reason} (도메인 템플릿 사용)"
+        domain_swot["_timestamp"] = datetime.now().isoformat()
+        return domain_swot
+    
+    # 3단계: 최종 투명한 fallback
+    return {
+        "S": [f"{company} SWOT 분석 불가 - {error_reason}"],
+        "W": [f"{company} SWOT 분석 불가 - {error_reason}"],
+        "O": [f"{company} SWOT 분석 불가 - {error_reason}"],
+        "T": [f"{company} SWOT 분석 불가 - {error_reason}"],
+        "_fallback": True,
+        "_error": error_reason,
+        "_timestamp": datetime.now().isoformat()
+    }
+
+
+def _load_existing_swot(company: str) -> Optional[Dict[str, List[str]]]:
+    """기존 저장된 SWOT 데이터 로드"""
+    try:
+        file_path = os.path.join(COMPANY_DIR, f"{company.lower().replace(' ', '_')}.json")
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                # 최근 분석 결과에서 SWOT 추출
+                if isinstance(data, list) and len(data) > 0:
+                    latest = data[-1]  # 가장 최근 데이터
+                    if "swot" in latest and _validate_swot_structure(latest["swot"]):
+                        return latest["swot"]
     except:
         pass
+    return None
+
+
+def _get_domain_based_swot(company: str) -> Optional[Dict[str, List[str]]]:
+    """회사명 기반 도메인 템플릿 SWOT"""
+    company_lower = company.lower()
     
-    # Fallback
-    return {
-        "S": ["프로젝트 수주 역량", "기술 인프라"],
-        "W": ["높은 비용"],
-        "O": ["디지털 전환 수요"],
-        "T": ["경쟁 심화"]
-    }
+    # IT 서비스 회사 공통 템플릿
+    if any(keyword in company_lower for keyword in ["sds", "cns", "오토에버", "c&c"]):
+        return {
+            "S": ["IT 인프라 구축 경험", "대기업 그룹 지원"],
+            "W": ["높은 프로젝트 비용", "복잡한 의사결정 구조"],
+            "O": ["디지털 전환 수요 증가", "AI/클라우드 시장 확대"],
+            "T": ["중소기업의 가격 경쟁", "글로벌 IT 기업 진출"]
+        }
+    
+    return None
+
+
+def _validate_swot_structure(swot_data: Dict) -> bool:
+    """SWOT 데이터 구조 검증"""
+    required_keys = ["S", "W", "O", "T"]
+    
+    if not isinstance(swot_data, dict):
+        return False
+    
+    for key in required_keys:
+        if key not in swot_data:
+            return False
+        if not isinstance(swot_data[key], list):
+            return False
+        if len(swot_data[key]) == 0:
+            return False
+    
+    return True
 
 
 def generate_competitive_comparison(profiles: Dict[str, Dict]) -> str:
@@ -421,11 +522,13 @@ def generate_competitive_comparison(profiles: Dict[str, Dict]) -> str:
         combined = "\n\n".join(companies_info)
         
         prompt = f"""
+당신은 기업의 전략 컨설턴트 역할을 수행합니다.
 다음은 3개 경쟁사의 요약입니다:
 
 {combined}
 
 이들을 비교하여 각 회사의 차별화 포인트와 경쟁 우위를 3-4문장으로 요약해주세요.
+각 회사의 특징을 상대적으로 비교해주세요.
 """
         
         model = os.getenv("AOAI_DEPLOY_GPT4O_MINI", "gpt-4o-mini")
