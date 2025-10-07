@@ -64,25 +64,55 @@ def reporter(data: Optional[Dict[str, Any]] = None) -> dict:
     competitors = data.get("competitor_profiles", {})
     strategy = data.get("strategy", {})
 
-    # 간단 브리핑 (Deal Brief)
+    # 상세한 Deal Brief 생성
     deal_brief = f"""
-📋 Deal Brief
-- 요구사항: {len(requirements)}개
-- 평가 기준: {len(evaluation)}개
-- 리스크 후보: {len(risks)}개
-- 내부 매칭: {len(internal_matches)}개
-- 경쟁사 분석: {len(competitors)}개
-- 전략 액션: {len(strategy.get('actions', []))}개
+🎯 **입찰 전략 분석 요약**
+
+📊 **프로젝트 개요**
+- 핵심 요구사항: {len(requirements)}개 항목
+- 평가 기준: {len(evaluation)}개 (기술/가격/사업수행능력)
+- 잠재 리스크: {len(risks)}개 식별
+- 내부 매칭 사례: {len(internal_matches)}개 요구사항 대응
+- 경쟁사 분석: {len(competitors)}개 기업 분석 완료
+
+🚀 **핵심 전략 방향**
+- 차별화 포인트: {len(strategy.get('differentiation', []))}개 도출
+- 실행 계획: {len(strategy.get('actions', []))}개 액션 아이템
+- 경쟁 우위: {len(strategy.get('competitive_advantages', []))}개 강점 영역
+- 보완 필요: {len(strategy.get('capability_gaps', []))}개 역량 갭
+
+💡 **주요 인사이트**
+- 기술적 접근: {strategy.get('strategic_recommendations', {}).get('technical_approach', '분석 필요')}
+- 가격 전략: {strategy.get('strategic_recommendations', {}).get('pricing_strategy', '분석 필요')}
+- 고객 중심: {strategy.get('strategic_recommendations', {}).get('customer_focus', '분석 필요')}
 """.strip()
 
-    # 상세 섹션
+    # 상세 섹션 - 구조화된 형식으로 개선
     sections = {
-        "요구사항": requirements[:5],
-        "평가기준": evaluation[:5],
-        "리스크": risks[:5],
-        "내부매칭": _format_internal_matches(internal_matches, limit=5),
-        "경쟁사": {k: v.get("swot", {}) for k, v in competitors.items()},
-        "전략": strategy
+        "📋 RFP 요구사항 분석": {
+            "핵심 요구사항": requirements[:5],
+            "평가 기준": evaluation[:5],
+            "잠재 리스크": risks[:5]
+        },
+        "🔍 내부 역량 매칭": {
+            "매칭 결과": _format_internal_matches(internal_matches, limit=5),
+            "강점 영역": strategy.get('competitive_advantages', []),
+            "보완 필요 영역": strategy.get('capability_gaps', [])
+        },
+        "⚔️ 경쟁사 분석": {
+            company: {
+                "회사 개요": profile.get("company_summary", "")[:200] + "..." if profile.get("company_summary") else "분석 필요",
+                "SWOT 분석": profile.get("swot", {}),
+                "핵심 기술": profile.get("key_technologies", [])[:3],
+                "차별화 포인트": profile.get("differentiation_points", [])[:3]
+            } for company, profile in competitors.items()
+        },
+        "🚀 전략 제안": {
+            "차별화 전략": strategy.get('differentiation', []),
+            "실행 계획": strategy.get('actions', []),
+            "전략적 추천사항": strategy.get('strategic_recommendations', {})
+        },
+        "📊 SWOT 분석": strategy.get('swot', {})
     }
 
     return {
