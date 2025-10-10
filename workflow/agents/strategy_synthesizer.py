@@ -920,14 +920,58 @@ def strategy_synthesizer(
                     
                     print(f"[전략 합성 v3.1] 경쟁사 대응 개수: {len(competitor_counters)}, 액션 개수: {len(actions)}")
                     
-                    # 간단한 응답이면 재시도
-                    if len(competitor_counters) < 3 or len(actions) < 5:
+                    # 간단한 응답이면 재시도 (더 엄격한 기준)
+                    if len(competitor_counters) < 6 or len(actions) < 8:
                         print("[전략 합성 v3.1] ⚠️ 응답이 너무 간단함, 상세 모드로 재시도...")
+                        print(f"    - 필수: 경쟁사 대응 6개 이상, 액션 8개 이상")
+                        print(f"    - 현재: 경쟁사 대응 {len(competitor_counters)}개, 액션 {len(actions)}개")
+                        
                         # 더 강력한 프롬프트로 재시도
-                        enhanced_prompt = prompt + "\n\n⚠️⚠️⚠️ 경고: 위 JSON 스키마의 모든 필드를 매우 상세하게 작성하세요. 간단한 응답은 거부됩니다. 각 항목에 구체적인 수치, 검증 근거, 단계별 방법을 포함해야 합니다!"
-                        result_text = call_llm(enhanced_prompt, temperature=0.8)
+                        enhanced_prompt = f"""{prompt}
+
+⚠️⚠️⚠️ 최종 경고: 이전 응답이 너무 간단하여 거부되었습니다!
+
+필수 요구사항 (반드시 충족):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. competitor_counters: 최소 6개 이상 (각 경쟁사당 2개 이상)
+   - 삼성 SDS 대응 전략 2개 이상 (Brity Works AI 구체적 대응)
+   - LG CNS 대응 전략 2개 이상 (DAP 플랫폼 구체적 대응)
+   - 현대오토에버 대응 전략 2개 이상 (모빌리티 플랫폼 구체적 대응)
+
+2. prioritized_actions: 최소 10개 이상
+   - Impact, Urgency, Effort 모두 명시
+   - why, how, strategy_approach 모두 상세히 작성
+   - expected_result에 구체적 수치 포함
+
+3. 각 대응 전략의 필수 포함 요소:
+   - 경쟁사 제품/서비스 구체적 명칭
+   - 정량적 비교 수치 (예: "30% 우수", "비용 15% 절감")
+   - 검증 근거 (PoC, 벤치마크, 실측 데이터)
+   - 측정 기준 명시 (예: "p95 기준", "동일 부하 테스트")
+
+예시 (이렇게 상세하게 작성):
+{{"company": "삼성 SDS", "counter": "강점 1: Brity Works AI 대비 당사 맞춤형 AI - 개발 속도 +40% (6주 vs 10주, 벤치마크 3건), 장애율 -35% (월 2건 vs 3.5건, 최근 6개월 실측), 정확도 +5% (92% vs 87%, PoC 검증 데이터). 약점 공략: 의사결정 속도 (승인 3단계 vs 7단계, 2.3배 빠름) + 비용 (TCO 15% 절감, 12억 vs 14.1억)"}}
+{{"company": "삼성 SDS", "counter": "강점 2: Agile 조직 구조로 변경 대응 48시간 vs 삼성 SDS 10일 (실측 12건 프로젝트) + 커스터마이징 자유도 2배 (표준 솔루션 제약 없음) + PoC 성공률 90% vs 70%"}}
+
+지금 즉시 위 조건을 만족하는 매우 상세한 JSON을 생성하세요!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
+                        
+                        result_text = call_llm(enhanced_prompt, temperature=0.9, max_tokens=8000)
                         if result_text:
-                            strategy_data = parse_json_response(result_text)
+                            strategy_data_retry = parse_json_response(result_text)
+                            if isinstance(strategy_data_retry, dict):
+                                # 재시도 결과 재검증
+                                retry_counters = strategy_data_retry.get('appendix', {}).get('competitor_counters', [])
+                                retry_actions = strategy_data_retry.get('prioritized_actions', [])
+                                print(f"[전략 합성 v3.1] 재시도 결과 - 경쟁사 대응: {len(retry_counters)}개, 액션: {len(retry_actions)}개")
+                                
+                                if len(retry_counters) >= 6 and len(retry_actions) >= 8:
+                                    print("[전략 합성 v3.1] ✅ 재시도 성공: 상세 응답 확보")
+                                    strategy_data = strategy_data_retry
+                                else:
+                                    print("[전략 합성 v3.1] ⚠️ 재시도 실패: 여전히 간단함 → 폴백 사용")
+                                    fb = _fallback_strategy(norm_requirements, internal_matches, competitor_profiles)
+                                    return {"strategy": fb, "deal_brief": _generate_deal_brief(fb)}
                     
                     print("[전략 합성 v3.1] ✅ AI 분석 완료")
                     deal_brief = _generate_deal_brief(strategy_data)
