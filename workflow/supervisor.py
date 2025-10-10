@@ -160,12 +160,12 @@ class ParallelSupervisor:
             except Exception:
                 m["match_score"] = 0.55
 
-        print("\n🎯 [Strategy Synthesizer v2] 전략 분석 시작...\n")
+        print("\n🎯 [Strategy Synthesizer v3.1] 전략 분석 시작 (상세 모드)...\n")
         strategy_result = await strategy_synthesizer.ainvoke({
             "requirements": requirements,
             "internal_matches": internal_matches,
             "competitor_profiles": competitor_data.get("competitor_profiles", {}),
-            "temperature": 0.2
+            "temperature": 0.7
         })
 
         print("\n✅ [Supervisor] 전체 프로세스 완료\n")

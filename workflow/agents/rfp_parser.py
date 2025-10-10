@@ -1,13 +1,18 @@
 import os
 import sys
 import asyncio
+from pathlib import Path
 from langchain_core.tools import tool
 from retrivers.rfp_retriever import build_rfp_retriever
 
 # ======================
 # 통합 LLM 클라이언트 사용
 # ======================
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
+# 프로젝트 루트를 sys.path에 추가
+project_root = Path(__file__).parent.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 from utils.llm_client import (
     get_llm_client,
     is_llm_available,

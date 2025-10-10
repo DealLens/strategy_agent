@@ -9,6 +9,9 @@ from langchain_core.tools import tool
 # =========================
 # 초기화
 # =========================
+import sys
+from pathlib import Path
+
 try:
     from dotenv import load_dotenv
     PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -19,8 +22,11 @@ except:
 # =========================
 # 통합 LLM 클라이언트 사용
 # =========================
-import sys
-sys.path.append(PROJECT_ROOT)
+# 프로젝트 루트를 sys.path에 추가
+project_root = Path(__file__).parent.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 from utils.llm_client import get_llm_client, is_llm_available, call_llm, parse_json_response
 
 llm_client = get_llm_client()
