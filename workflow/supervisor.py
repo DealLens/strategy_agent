@@ -3,6 +3,13 @@ from langchain_openai import AzureChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.agents import create_tool_calling_agent, AgentExecutor
 
+# .env 파일 로드
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv가 없어도 환경변수는 사용 가능
+
 from workflow.agents.rfp_parser import rfp_parser
 from workflow.agents.internal_rag import internal_rag
 from workflow.agents.competitor_analysis import competitor_analysis
@@ -100,7 +107,9 @@ try:
             api_key=AOAI_API_KEY,
             temperature=0.2,
         )
-        print("✅ Azure OpenAI 사용")
+        print("✅ [Supervisor] Azure OpenAI 초기화 성공")
+        print(f"   - Endpoint: {AOAI_ENDPOINT}")
+        print(f"   - Deployment: {AOAI_DEPLOY_GPT4O}")
     elif OPENAI_API_KEY:
         # OpenAI
         from langchain_openai import ChatOpenAI
@@ -109,12 +118,19 @@ try:
             model="gpt-4o-mini",
             temperature=0.2
         )
-        print("✅ OpenAI 사용")
+        print("✅ [Supervisor] OpenAI 초기화 성공")
     else:
-        print("⚠️ API 키가 없어서 더미 모드로 동작합니다")
+        print("⚠️ [Supervisor] API 키가 설정되지 않았습니다.")
+        print("   필요한 환경 변수:")
+        print("   - Azure OpenAI: AOAI_API_KEY, AOAI_ENDPOINT")
+        print("   - 또는 OpenAI: OPENAI_API_KEY")
+        print("   더미 모드로 동작합니다.")
         llm = None
 except Exception as e:
-    print(f"⚠️ LLM 초기화 실패: {e}")
+    print(f"⚠️ [Supervisor] LLM 초기화 실패: {e}")
+    print("   환경 변수를 확인해주세요:")
+    print("   - AOAI_API_KEY, AOAI_ENDPOINT (Azure)")
+    print("   - OPENAI_API_KEY (OpenAI)")
     llm = None
 
 # --- AgentExecutor or Dummy ---

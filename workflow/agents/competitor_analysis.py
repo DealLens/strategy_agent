@@ -22,6 +22,8 @@ except:
 
 # OpenAI 클라이언트
 client = None
+client_init_error = None
+
 try:
     if os.getenv("AOAI_ENDPOINT") and os.getenv("AOAI_API_KEY"):
         from openai import AzureOpenAI
@@ -30,11 +32,19 @@ try:
             api_version="2024-02-15-preview",
             azure_endpoint=os.getenv("AOAI_ENDPOINT"),
         )
+        print("✅ [경쟁사 분석] Azure OpenAI 클라이언트 초기화 성공")
     elif os.getenv("OPENAI_API_KEY"):
         from openai import OpenAI
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-except:
-    pass
+        print("✅ [경쟁사 분석] OpenAI 클라이언트 초기화 성공")
+    else:
+        client_init_error = "환경 변수 미설정: AOAI_API_KEY, AOAI_ENDPOINT 또는 OPENAI_API_KEY 필요"
+        print(f"⚠️ [경쟁사 분석] {client_init_error}")
+        print("   AI 기반 분석 기능이 제한됩니다.")
+except Exception as e:
+    client_init_error = str(e)
+    print(f"⚠️ [경쟁사 분석] OpenAI 클라이언트 초기화 실패: {e}")
+    print("   AI 기반 분석 기능이 제한됩니다.")
 
 # 모드/설정 토글
 FAST_MODE = os.getenv("FAST_MODE", "1") == "1"
