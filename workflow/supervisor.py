@@ -161,10 +161,17 @@ class ParallelSupervisor:
                 m["match_score"] = 0.55
 
         print("\n🎯 [Strategy Synthesizer v3.1] 전략 분석 시작 (상세 모드)...\n")
+        
+        # 경쟁사 데이터 확인
+        comp_profiles = competitor_data.get("competitor_profiles", {})
+        print(f"📊 [DEBUG] 경쟁사 프로필 개수: {len(comp_profiles)}")
+        for company in comp_profiles.keys():
+            print(f"  - {company}")
+        
         strategy_result = await strategy_synthesizer.ainvoke({
             "requirements": requirements,
             "internal_matches": internal_matches,
-            "competitor_profiles": competitor_data.get("competitor_profiles", {}),
+            "competitor_profiles": comp_profiles,
             "temperature": 0.7
         })
 

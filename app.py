@@ -700,10 +700,22 @@ def render_analysis_detail():
                 # 4. 전략 도출 결과
                 with st.expander("④ 전략 도출 결과", expanded=True):
                     if results and 'strategy' in results:
-                        strategy_data = results['strategy'].get('strategy', {})
+                        # 상태 메시지 표시
+                        strategy_result = results['strategy']
+                        status = strategy_result.get('status', 'unknown')
+                        message = strategy_result.get('message', '')
+                        
+                        if status == 'success':
+                            st.success(message)
+                        elif status == 'fallback':
+                            st.warning(message)
+                        elif status == 'error':
+                            st.error(message)
+                        
+                        strategy_data = strategy_result.get('strategy', {})
                         
                         if strategy_data.get('summary'):
-                            st.markdown("### 💡 AI 전략 요약")
+                            st.markdown("### 💡 전략 요약")
                             st.info(strategy_data['summary'])
                             st.markdown("---")
                         
@@ -1035,12 +1047,101 @@ def render_strategy_detail_page():
     results = st.session_state.get('analysis_results')
     
     if results and 'strategy' in results and not results.get('error'):
-        strategy_data = results['strategy'].get('strategy', {})
+        # 상태 메시지 표시
+        strategy_result = results['strategy']
+        status = strategy_result.get('status', 'unknown')
+        message = strategy_result.get('message', '')
+        
+        if status == 'success':
+            st.success(message)
+        elif status == 'fallback':
+            st.warning(message)
+        elif status == 'error':
+            st.error(message)
+        
+        strategy_data = strategy_result.get('strategy', {})
+        appendix = strategy_data.get('appendix', {})
+        
+        # 🎯 임원 요약 (Executive Summary)
+        executive_summary = appendix.get('executive_summary', {})
+        if executive_summary:
+            st.markdown("## 🎯 임원 요약 (Executive Summary)")
+            
+            # 핵심 메시지 3가지
+            key_messages = executive_summary.get('핵심 메시지 3가지', [])
+            if key_messages:
+                st.markdown("### 💡 핵심 메시지 (Top 3)")
+                for msg in key_messages:
+                    st.success(msg)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                # 투자 대비 효과
+                roi_value = executive_summary.get('투자 대비 효과', '')
+                if roi_value:
+                    st.markdown("### 💰 투자 대비 효과")
+                    st.info(roi_value)
+            
+            with col2:
+                # 위험 요소 TOP 3
+                top_risks = executive_summary.get('위험 요소 TOP 3', '')
+                if top_risks:
+                    st.markdown("### ⚠️ 주요 위험 요소")
+                    st.warning(top_risks)
+            
+            st.markdown("---")
+        
+        # 📊 경쟁사 비교 요약 테이블
+        comparison_table = appendix.get('competitor_comparison_table', [])
+        if comparison_table:
+            st.markdown("## 📊 경쟁사 비교 요약")
+            
+            for row in comparison_table:
+                category = row.get('category', '')
+                st.markdown(f"### {category}")
+                
+                col1, col2, col3, col4, col5 = st.columns([1.5, 2, 2, 2, 2.5])
+                
+                with col1:
+                    st.markdown("**구분**")
+                with col2:
+                    st.markdown("**당사**")
+                with col3:
+                    st.markdown("**삼성 SDS**")
+                with col4:
+                    st.markdown("**LG CNS**")
+                with col5:
+                    st.markdown("**현대오토에버**")
+                
+                st.markdown("---")
+                
+                col1, col2, col3, col4, col5 = st.columns([1.5, 2, 2, 2, 2.5])
+                
+                with col1:
+                    st.markdown("지표")
+                with col2:
+                    st.success(row.get('당사', '-'))
+                with col3:
+                    st.markdown(row.get('삼성 SDS', '-'))
+                with col4:
+                    st.markdown(row.get('LG CNS', '-'))
+                with col5:
+                    st.markdown(row.get('현대오토에버', '-'))
+                
+                # 당사 우위 강조
+                advantage = row.get('당사 우위', '')
+                if advantage:
+                    st.info(f"**{advantage}**")
+                
+                st.markdown("")
+            
+            st.markdown("---")
         
         # 1️⃣ 전략 요약 (핵심 방향성)
         st.markdown("## 1️⃣ 전략 요약 (핵심 방향성)")
         if strategy_data.get('summary'):
-            st.info(strategy_data['summary'])
+            with st.expander("📋 전체 전략 요약 보기", expanded=False):
+                st.info(strategy_data['summary'])
         
         # Focus 영역 표시
         focus = strategy_data.get('focus', {})
@@ -1057,14 +1158,27 @@ def render_strategy_detail_page():
                 st.markdown(focus.get('market', 'N/A'))
         st.markdown("---")
                 
-        # 2️⃣ 요구사항 대비 내부 적합도 분석
+        # 2️⃣ 요구사항 대비 내부 적합도 분석 (그룹화)
         st.markdown("## 2️⃣ 요구사항 대비 내부 적합도 분석")
         appendix = strategy_data.get('appendix', {})
         fit_table = appendix.get('fit_table', [])
         
         if fit_table:
+            # 갭 원인별로 그룹화
+            from collections import defaultdict
+            gap_groups = defaultdict(list)
+            
             for fit_row in fit_table:
-                fit_level = fit_row.get('fit_level', 'unknown').upper()
+                gap_cause = fit_row.get('gap_root_cause', '기타')
+                # 같은 갭 원인을 가진 항목들을 그룹화
+                gap_groups[gap_cause].append(fit_row)
+            
+            # 그룹별로 출력
+            group_idx = 1
+            for gap_cause, items in gap_groups.items():
+                # 첫 번째 항목의 정보 사용 (같은 갭이므로 동일한 영향/솔루션)
+                first_item = items[0]
+                fit_level = first_item.get('fit_level', 'unknown').upper()
                 fit_color = {
                     'HIGH_FIT': '🟢',
                     'PARTIAL_FIT': '🟡',
@@ -1072,32 +1186,48 @@ def render_strategy_detail_page():
                     'UNKNOWN': '⚪'
                 }.get(fit_level, '⚪')
                 
-                fit_id = fit_row.get('id', '')
-                st.markdown(f"### {fit_color} [{fit_id}] {fit_row.get('requirement', '요구사항 미지정')}")
+                # 그룹 제목 (대표 키워드 추출)
+                if "레거시 기술 스택" in gap_cause or "Java" in gap_cause or "Spring" in gap_cause:
+                    group_title = "레거시 기술 스택 현대화"
+                elif "AI" in gap_cause or "MLOps" in gap_cause or "모델" in gap_cause:
+                    group_title = "AI/ML 운영 체계"
+                elif "보안 인증" in gap_cause or "ISMS" in gap_cause:
+                    group_title = "보안 인증 및 컴플라이언스"
+                elif "내부 역량 부족" in gap_cause:
+                    group_title = "내부 역량 보완 (파트너 협업)"
+                else:
+                    group_title = f"갭 그룹 {group_idx}"
+                
+                st.markdown(f"### {fit_color} {group_title}")
+                
+                # 관련 요구사항 리스트
+                requirements = [item.get('requirement', '') for item in items]
+                st.markdown(f"**📋 관련 요구사항 ({len(items)}건):**")
+                for req in requirements:
+                    st.markdown(f"  • {req}")
+                
                 st.markdown(f"**📊 적합도 수준:** {fit_level.replace('_', ' ').title()}")
                 
-                # 기술 갭 원인 (1️⃣ 개선)
-                gap_root_cause = fit_row.get('gap_root_cause', '')
-                if gap_root_cause:
-                    st.markdown(f"**🔍 갭 원인 분석:** {gap_root_cause}")
+                # 갭 원인 분석 (공통)
+                if gap_cause:
+                    st.markdown(f"**🔍 갭 원인:** {gap_cause}")
                 
-                # 정량적 영향
-                quantitative_impact = fit_row.get('quantitative_impact', '')
+                # 정량적 영향 (공통)
+                quantitative_impact = first_item.get('quantitative_impact', '')
                 if quantitative_impact:
                     st.markdown(f"**📈 정량적 영향:** {quantitative_impact}")
                 
-                # 정성적 영향
-                qualitative_impact = fit_row.get('qualitative_impact', '')
+                # 정성적 영향 (공통)
+                qualitative_impact = first_item.get('qualitative_impact', '')
                 if qualitative_impact:
                     st.markdown(f"**💭 정성적 영향:** {qualitative_impact}")
                 
-                st.markdown(f"**🔧 보완/강화 액션:** {fit_row.get('suggested_action', 'N/A')}")
+                # 보완 액션 (공통)
+                suggested_action = first_item.get('suggested_action', 'N/A')
+                st.markdown(f"**🔧 통합 솔루션:** {suggested_action}")
                 
-                # 연결된 액션 표시
-                action_ids = fit_row.get('action_ids', [])
-                if action_ids:
-                    st.markdown(f"**🔗 연결된 액션:** {', '.join(action_ids)}")
                 st.markdown("---")
+                group_idx += 1
         else:
             st.info("적합도 분석 데이터가 없습니다.")
         st.markdown("---")
@@ -1192,16 +1322,6 @@ def render_strategy_detail_page():
                         timeline = action.get('expected_timeline', 'N/A')
                         st.markdown(f"**⏱️ 예상 일정:** {timeline}")
                     
-                    # 연결 관계
-                    related_fit_ids = action.get('related_fit_ids', [])
-                    related_risks = action.get('related_risks', [])
-                    if related_fit_ids or related_risks:
-                        st.markdown("**🔗 연결:**")
-                        if related_fit_ids:
-                            st.markdown(f"  - 해결하는 적합도: {', '.join(related_fit_ids)}")
-                        if related_risks:
-                            st.markdown(f"  - 완화하는 리스크: {', '.join(related_risks)}")
-                    
                     st.markdown("")
                 else:
                     st.markdown(f"{i}. {action}")
@@ -1236,115 +1356,67 @@ def render_strategy_detail_page():
             st.info("SWOT 분석 데이터가 없습니다.")
         st.markdown("---")
         
-        # 6️⃣ 3단계 실행 로드맵
+        # 6️⃣ 3단계 실행 로드맵 (전략 수준)
         st.markdown("## 6️⃣ 3단계 실행 로드맵")
         roadmap = strategy_data.get('roadmap', {})
         
         if roadmap:
             col1, col2, col3 = st.columns(3)
             
+            # Phase 0: Pre-Bid
             with col1:
                 st.markdown("### 📋 Phase 0: Pre-Bid")
-                prebid = roadmap.get('phase_0_prebid', [])
-                if prebid:
-                    for item in prebid:
-                        if isinstance(item, dict):
-                            st.markdown(f"**• {item.get('task', 'N/A')}**")
-                            
-                            # 의존성 및 병행 작업 (4️⃣ 개선)
-                            dependencies = item.get('dependencies', [])
-                            if dependencies:
-                                st.markdown(f"  ⚡ 선행 작업: {', '.join(dependencies)}")
-                            
-                            parallel_tasks = item.get('parallel_tasks', [])
-                            if parallel_tasks:
-                                st.markdown(f"  🔀 병행 가능: {', '.join(parallel_tasks)}")
-                            
-                            resources = item.get('resources', '')
-                            if resources:
-                                st.markdown(f"  👥 투입 인력: {resources}")
-                            
-                            milestones = item.get('milestones', '')
-                            if milestones:
-                                st.markdown(f"  🎯 체크포인트: {milestones}")
-                            
-                            if item.get('expected_outcome'):
-                                st.markdown(f"  📊 예상 결과: {item.get('expected_outcome')}")
-                            if item.get('related_actions'):
-                                st.markdown(f"  🔗 액션: {', '.join(item.get('related_actions', []))}")
-                        else:
-                            st.markdown(f"- {item}")
-                        st.markdown("")
+                prebid = roadmap.get('phase_0_prebid', {})
+                if prebid and isinstance(prebid, dict):
+                    st.markdown(f"**⏱️ 기간:** {prebid.get('duration', 'N/A')}")
+                    st.markdown(f"**🎯 목표:** {prebid.get('objective', 'N/A')}")
+                    st.markdown(f"**❓ 이유:** {prebid.get('why', 'N/A')}")
+                    
+                    deliverables = prebid.get('key_deliverables', [])
+                    if deliverables:
+                        st.markdown("**📦 주요 산출물:**")
+                        for d in deliverables:
+                            st.markdown(f"  • {d}")
+                    
+                    st.markdown(f"**📊 기대 효과:** {prebid.get('expected_outcome', 'N/A')}")
                 else:
                     st.markdown("_항목 없음_")
             
+            # Phase 1: PoC
             with col2:
                 st.markdown("### 🧪 Phase 1: PoC")
-                poc = roadmap.get('phase_1_poc', [])
-                if poc:
-                    for item in poc:
-                        if isinstance(item, dict):
-                            st.markdown(f"**• {item.get('task', 'N/A')}**")
-                            
-                            # 의존성 및 병행 작업 (4️⃣ 개선)
-                            dependencies = item.get('dependencies', [])
-                            if dependencies:
-                                st.markdown(f"  ⚡ 선행 작업: {', '.join(dependencies)}")
-                            
-                            parallel_tasks = item.get('parallel_tasks', [])
-                            if parallel_tasks:
-                                st.markdown(f"  🔀 병행 가능: {', '.join(parallel_tasks)}")
-                            
-                            resources = item.get('resources', '')
-                            if resources:
-                                st.markdown(f"  👥 투입 인력: {resources}")
-                            
-                            milestones = item.get('milestones', '')
-                            if milestones:
-                                st.markdown(f"  🎯 체크포인트: {milestones}")
-                            
-                            if item.get('expected_outcome'):
-                                st.markdown(f"  📊 예상 결과: {item.get('expected_outcome')}")
-                            if item.get('related_actions'):
-                                st.markdown(f"  🔗 액션: {', '.join(item.get('related_actions', []))}")
-                        else:
-                            st.markdown(f"- {item}")
-                        st.markdown("")
+                poc = roadmap.get('phase_1_poc', {})
+                if poc and isinstance(poc, dict):
+                    st.markdown(f"**⏱️ 기간:** {poc.get('duration', 'N/A')}")
+                    st.markdown(f"**🎯 목표:** {poc.get('objective', 'N/A')}")
+                    st.markdown(f"**❓ 이유:** {poc.get('why', 'N/A')}")
+                    
+                    deliverables = poc.get('key_deliverables', [])
+                    if deliverables:
+                        st.markdown("**📦 주요 산출물:**")
+                        for d in deliverables:
+                            st.markdown(f"  • {d}")
+                    
+                    st.markdown(f"**📊 기대 효과:** {poc.get('expected_outcome', 'N/A')}")
                 else:
                     st.markdown("_항목 없음_")
             
+            # Phase 2: Proposal
             with col3:
                 st.markdown("### 📄 Phase 2: Proposal")
-                proposal = roadmap.get('phase_2_proposal', [])
-                if proposal:
-                    for item in proposal:
-                        if isinstance(item, dict):
-                            st.markdown(f"**• {item.get('task', 'N/A')}**")
-                            
-                            # 의존성 및 병행 작업 (4️⃣ 개선)
-                            dependencies = item.get('dependencies', [])
-                            if dependencies:
-                                st.markdown(f"  ⚡ 선행 작업: {', '.join(dependencies)}")
-                            
-                            parallel_tasks = item.get('parallel_tasks', [])
-                            if parallel_tasks:
-                                st.markdown(f"  🔀 병행 가능: {', '.join(parallel_tasks)}")
-                            
-                            resources = item.get('resources', '')
-                            if resources:
-                                st.markdown(f"  👥 투입 인력: {resources}")
-                            
-                            milestones = item.get('milestones', '')
-                            if milestones:
-                                st.markdown(f"  🎯 체크포인트: {milestones}")
-                            
-                            if item.get('expected_outcome'):
-                                st.markdown(f"  📊 예상 결과: {item.get('expected_outcome')}")
-                            if item.get('related_actions'):
-                                st.markdown(f"  🔗 액션: {', '.join(item.get('related_actions', []))}")
-                        else:
-                            st.markdown(f"- {item}")
-                        st.markdown("")
+                proposal = roadmap.get('phase_2_proposal', {})
+                if proposal and isinstance(proposal, dict):
+                    st.markdown(f"**⏱️ 기간:** {proposal.get('duration', 'N/A')}")
+                    st.markdown(f"**🎯 목표:** {proposal.get('objective', 'N/A')}")
+                    st.markdown(f"**❓ 이유:** {proposal.get('why', 'N/A')}")
+                    
+                    deliverables = proposal.get('key_deliverables', [])
+                    if deliverables:
+                        st.markdown("**📦 주요 산출물:**")
+                        for d in deliverables:
+                            st.markdown(f"  • {d}")
+                    
+                    st.markdown(f"**📊 기대 효과:** {proposal.get('expected_outcome', 'N/A')}")
                 else:
                     st.markdown("_항목 없음_")
         else:
@@ -1364,10 +1436,24 @@ def render_strategy_detail_page():
                     likelihood = risk.get('likelihood', 'medium').upper()
                     impact = risk.get('impact', 'medium').upper()
                     
-                    risk_level = "🔴" if likelihood == "HIGH" and impact == "HIGH" else "🟡" if likelihood == "HIGH" or impact == "HIGH" else "🟢"
+                    # 리스크 레벨 및 점수 (strategy_synthesizer에서 제공)
+                    risk_level_display = risk.get('risk_level', '')
+                    risk_score = risk.get('risk_score', 0)
+                    
+                    # 폴백: risk_level이 없으면 자동 계산
+                    if not risk_level_display:
+                        risk_level_emoji = "🔴" if likelihood == "HIGH" and impact == "HIGH" else "🟡" if likelihood == "HIGH" or impact == "HIGH" else "🟢"
+                        risk_level_display = f"{risk_level_emoji} {likelihood} x {impact}"
+                    
                     risk_id = risk.get('id', f'R{i}')
                     
-                    st.markdown(f"### {risk_level} [{risk_id}] {risk.get('risk', '리스크 항목')}")
+                    st.markdown(f"### {risk_level_display} [{risk_id}] {risk.get('risk', '리스크 항목')}")
+                    
+                    # 리스크 점수 표시 (바 차트 형태)
+                    if risk_score > 0:
+                        risk_bar = "█" * risk_score + "░" * (10 - risk_score)
+                        st.markdown(f"**📊 리스크 점수:** {risk_score}/10 {risk_bar}")
+                    
                     st.markdown(f"**📊 평가:** 가능성 {likelihood} | 영향도 {impact}")
                     st.markdown(f"**🛡️ 대응 방안 (Plan A):** {risk.get('mitigation', 'N/A')}")
                     
@@ -1419,10 +1505,18 @@ def render_strategy_detail_page():
                     if measurement_method:
                         st.markdown(f"**📏 측정 방법:** {measurement_method}")
                     
-                    # 연결된 액션
-                    related_actions = kpi.get('related_actions', [])
-                    if related_actions:
-                        st.markdown(f"**🔗 관련 액션:** {', '.join(related_actions)}")
+                    # 관리 주체 및 측정 주기
+                    owner = kpi.get('owner', '')
+                    frequency = kpi.get('measurement_frequency', '')
+                    if owner or frequency:
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if owner:
+                                st.markdown(f"**👤 관리 주체:** {owner}")
+                        with col2:
+                            if frequency:
+                                st.markdown(f"**📅 측정 주기:** {frequency}")
+                    
                     st.markdown("---")
                 else:
                     st.markdown(f"{i}. {kpi}")

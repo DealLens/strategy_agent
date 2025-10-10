@@ -185,39 +185,30 @@ def _build_v3_1_prompt(
             }
         ],
         "roadmap": {
-            "phase_0_prebid": [
-                {
-                    "task": "레퍼런스 큐레이션 (담당: Sales 3명/PM 1명, 2주, Week 1~2)",
-                    "related_actions": ["A1", "A2"],
-                    "dependencies": [],
-                    "parallel_tasks": ["보안 인증 점검", "파트너사 선정"],
-                    "resources": "Sales 3명 + PM 1명 (full-time)",
-                    "milestones": "Week 2: 레퍼런스 5건 확보 확인",
-                    "expected_outcome": "레퍼런스 5~7건 확보 → 고객 신뢰도 40% 향상 → IR 자료 95% 완성 → 초기 평가 85% 통과"
-                }
-            ],
-            "phase_1_poc": [
-                {
-                    "task": "PoC 환경 구축 및 검증 (담당: Tech 5명, 4주, Week 5~8)",
-                    "related_actions": ["A3"],
-                    "dependencies": ["레퍼런스 큐레이션 완료", "요구사항 매핑 100%"],
-                    "parallel_tasks": [],
-                    "resources": "Tech Lead 1명 + 개발자 4명 (full-time)",
-                    "milestones": "Week 6: 환경 구축 완료, Week 8: PoC 성공률 90% 이상",
-                    "expected_outcome": "PoC 성공률 90% → 성능 25% 개선 입증 → 신규 레퍼런스 3건 → 기술 평가 8점 추가"
-                }
-            ],
-            "phase_2_proposal": [
-                {
-                    "task": "제안서 작성 및 차별화 (담당: Proposal 4명, 1주, Week 12~13)",
-                    "related_actions": ["A4"],
-                    "dependencies": ["PoC 완료", "모든 증빙 자료 준비"],
-                    "parallel_tasks": ["발표 자료 작성", "Q&A 준비"],
-                    "resources": "Proposal Writer 2명 + Reviewer 2명",
-                    "milestones": "Week 13: 제안서 완성도 95%, 차별화 점수 85점 이상",
-                    "expected_outcome": "차별화 요소 5가지 확립 → 평가 항목 100% 대응 → 제안 경쟁력 65점 → 수주 확률 60%"
-                }
-            ]
+            "phase_0_prebid": {
+                "duration": "4주 (Week 1~4)",
+                "objective": "제안 기반 확보 - 요구사항 100% 매핑 + 레퍼런스 5~7건 확보 + 파트너 협업 체계 구축",
+                "why": "초기 평가 통과율 85% 달성을 위해 기술 적합도 입증 및 신뢰도 확보 필요",
+                "key_deliverables": ["요구사항 매핑 완료", "레퍼런스 5~7건 확보", "보안 체크리스트 완료", "파트너 1~2곳 선정"],
+                "expected_outcome": "초기 평가 통과율 85% + 고객 신뢰도 40% 향상 + 기술 리스크 35% 감소",
+                "related_actions": ["A1", "A2"]
+            },
+            "phase_1_poc": {
+                "duration": "8주 (Week 5~12)",
+                "objective": "기술 검증 및 실증 - PoC 성공률 90% 달성 + 성능 25% 개선 입증 + 레퍼런스 3건 확보",
+                "why": "성능 미입증 문제 해결이 제안 경쟁력 확보의 핵심. PoC 실패 시 제안 탈락 가능성 60%",
+                "key_deliverables": ["PoC 설계 완료", "실제 데이터 검증 수행", "성능 비교 분석", "신규 레퍼런스 3건"],
+                "expected_outcome": "PoC 성공률 90% + 성능 목표 110% 달성 + 기술 평가 65점 이상",
+                "related_actions": ["A3", "A4"]
+            },
+            "phase_2_proposal": {
+                "duration": "3주 (Week 13~15)",
+                "objective": "제안서 완성 - 차별화 5가지 확립 + 평가 항목 100% 대응 + 경쟁력 35%→65% 향상",
+                "why": "PoC 결과를 제안서에 통합하여 경쟁사 대비 차별화 명확히 제시. 완성도 95% 이상 확보",
+                "key_deliverables": ["차별화 포인트 5가지", "TCO 분석 완료", "기술 제안서 작성", "리스크 대응 계획"],
+                "expected_outcome": "제안서 완성도 95% + 차별화 점수 85점 이상 + 수주 확률 35%→60%",
+                "related_actions": ["A5", "A6"]
+            }
         },
         "risks": [
             {
@@ -260,6 +251,19 @@ def _build_v3_1_prompt(
     }
 
     prompt = f"""
+🚨🚨🚨 CRITICAL: 반드시 다음 개수 이상을 생성하세요. 이는 협상 불가능한 필수 조건입니다:
+
+1. appendix.competitor_counters 배열: 6개 이상 (삼성 SDS 2개 + LG CNS 2개 + 현대오토에버 2개)
+2. prioritized_actions 배열: 10개 이상
+3. kpis 배열: 12개 이상
+4. risks 배열: 5개 이상
+5. differentiation 배열: 10개 이상
+
+⚠️ 위 개수를 충족하지 못하면 응답이 자동으로 거부됩니다!
+⚠️ 각 경쟁사(삼성 SDS, LG CNS, 현대오토에버)별로 최소 2개씩 대응 전략을 작성하세요!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 ⚠️⚠️⚠️ 중요: 이것은 실제 수십억원 규모 제안서를 위한 전략 분석입니다. 추상적이거나 간단한 응답은 절대 불가합니다!
 
 당신은 대형 엔터프라이즈 제안의 시니어 전략 컨설턴트입니다.
@@ -269,7 +273,7 @@ def _build_v3_1_prompt(
 - 모든 수치에는 구체적인 검증 근거 필수 (PoC 결과, 벤치마크, 실측 데이터)
 - 경쟁사별 고유한 기술/제품명 명시 (삼성 SDS: Brity Works AI, LG CNS: DAP 플랫폼, 현대오토에버: 모빌리티)
 - 모든 차별화 포인트에 정량적 수치와 측정 방법 포함
-- 최소 요구량: Competitor Counters 6개 이상, Actions 10개 이상, KPIs 12개 이상, Risks 5개 이상
+- 반드시 위 절대적 필수 조건(6개, 10개, 12개, 5개, 10개)을 충족해야 함
 
 [요구사항(카테고리 태깅)]
 {req_summary}
@@ -381,22 +385,27 @@ def _build_v3_1_prompt(
   예: "경쟁사 평균 2,200 TPS 대비 18% 우수", "업계 표준 0.8초 대비 38% 우수"
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-7️⃣ 로드맵 실행 연결성 강화 (의존성+병행+리소스)
+7️⃣ 로드맵 전략 수준 작성 (방향성 중심, PM 세부사항 제외)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-**Roadmap 각 task**에 추가 정보 포함:
-- task 이름에 담당자+기간 명시: "레퍼런스 큐레이션 (담당: Sales 3명/PM 1명, 2주, Week 1~2)"
+**Roadmap 각 Phase**에 포함할 내용 (전략 보고서 수준):
+- duration: "4주 (Week 1~4)" 형태로 기간만 명시
   
-- dependencies: 선행 작업 명시
-  예: {{"task": "PoC 환경 구축", "dependencies": ["레퍼런스 큐레이션 완료", "요구사항 매핑 100%"], ...}}
+- objective: Phase의 목표와 핵심 달성 내용 (무엇을 달성하는가)
+  예: "제안 기반 확보 - 요구사항 100% 매핑 + 레퍼런스 5~7건 확보 + 파트너 협업 체계 구축"
   
-- parallel_tasks: 병행 가능한 작업들
-  예: "보안 인증 점검"과 "파트너사 선정"은 병행 가능 (Week 1~2 동시 진행)
+- why: 이 Phase가 왜 필요한가 (전략적 이유)
+  예: "초기 평가 통과율 85% 달성을 위해 기술 적합도 입증 및 신뢰도 확보 필요"
   
-- resources: 투입 리소스
-  예: "Tech Lead 1명(full-time) + 개발자 3명(50% 할당) + PM 1명(full-time)"
+- key_deliverables: 주요 산출물 3~5개 (배열)
+  예: ["요구사항 매핑 완료", "레퍼런스 5~7건 확보", "보안 체크리스트 완료"]
   
-- milestones: 체크포인트
-  예: "Week 2 종료: 레퍼런스 3건 이상 확보 확인, Week 4 종료: PoC 중간 점검 (성공률 70% 이상)"
+- expected_outcome: 기대 효과 (정량적)
+  예: "초기 평가 통과율 85% + 고객 신뢰도 40% 향상 + 기술 리스크 35% 감소"
+
+⚠️ 제외할 내용 (PM 운영 계획 수준):
+- ❌ 담당자 인원수 (예: "Sales 3명/PM 1명")
+- ❌ dependencies, parallel_tasks, resources, milestones 등 세부 일정 관리
+- ❌ Week 단위 상세 마일스톤
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 8️⃣ 리스크 대응 실효성 강화 (Plan A + Plan B 필수)
@@ -419,7 +428,7 @@ def _build_v3_1_prompt(
 2. 모든 기간에 구체적 시작/종료 시점 (예: "2025년 11월 1일~12월 24일, 8주")
 3. 모든 경쟁사 대응에 해당 경쟁사의 구체적 기술/제품명 포함 (삼성 SDS: Brity Works AI, LG CNS: DAP, 현대오토에버: 모빌리티 플랫폼)
 4. 모든 리스크에 Plan B 대안 시나리오 + 발동 조건 필수
-5. 모든 로드맵 task에 의존성(dependencies) + 병행 작업(parallel_tasks) + 리소스(resources) + 마일스톤(milestones) 명시
+5. 로드맵은 전략 수준으로 작성 (duration, objective, why, key_deliverables, expected_outcome만 포함, PM 세부사항 제외)
 6. 모든 경쟁사 대응에 검증 근거 포함 (PoC 결과, 벤치마크, 실측 데이터)
 7. 자사 강점은 도구/조직/프로세스/품질 4가지 차원 모두 포함
 8. 시장/정책 흐름에 정부 정책 + 시장 성장률 + 산업 트렌드 + 타이밍 논리 모두 포함
@@ -433,7 +442,7 @@ def _build_v3_1_prompt(
 ✓ Differentiation: 10개 항목, 모두 정량 근거 포함
 ✓ KPIs: 12개 항목, 모두 baseline + target + measurement_method 포함
 ✓ Risks: 5~8개, 모두 Plan A + Plan B + trigger_condition 포함
-✓ Roadmap: 각 phase 4~5개 task, 모두 dependencies + parallel_tasks + resources + milestones 포함
+✓ Roadmap: 각 phase별 duration, objective, why, key_deliverables, expected_outcome 포함 (전략 수준)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 💡 경쟁사 대응 전략 작성 예시 (반드시 이 수준 이상으로 작성):
@@ -449,6 +458,28 @@ def _build_v3_1_prompt(
 ⚠️ 모든 수치에는 구체적인 근거 (PoC, 벤치마크, 실측 데이터, 레퍼런스) 포함 필수!
 ⚠️ 경쟁사의 구체적인 기술/제품/서비스명 (Brity Works AI, DAP, 모빌리티 플랫폼 등) 반드시 언급!
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔥 JSON 생성 전 자가 검증 체크리스트 (반드시 확인):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ appendix.competitor_counters 배열에 항목 6개 이상 있는가?
+   → 삼성 SDS 2개 이상
+   → LG CNS 2개 이상  
+   → 현대오토에버 2개 이상
+
+✅ prioritized_actions 배열에 항목 10개 이상 있는가?
+   → 각 액션에 why, how, strategy_approach, expected_result 모두 포함되었는가?
+
+✅ kpis 배열에 항목 12개 이상 있는가?
+   → 각 KPI에 baseline, target, measurement_method 모두 포함되었는가?
+
+✅ risks 배열에 항목 5개 이상 있는가?
+   → 각 리스크에 Plan A, Plan B, trigger_condition 모두 포함되었는가?
+
+✅ differentiation 배열에 항목 10개 이상 있는가?
+   → 각 항목에 정량적 수치와 검증 근거가 포함되었는가?
+
+위 체크리스트를 통과한 경우에만 JSON을 반환하세요!
+
 ※ 반환은 아래 JSON 스키마 **그대로**만 출력(설명 금지):
 {json.dumps(schema_hint, ensure_ascii=False)}
 """
@@ -456,315 +487,59 @@ def _build_v3_1_prompt(
 
 
 # ======================
-# 폴백(LLM 미사용/오류 시) 전략 생성
+# 폴백(LLM 미사용/오류 시) 간단한 오류 반환
 # ======================
 def _fallback_strategy(
     norm_requirements: List[Requirement],
     internal_matches: List[Dict[str, Any]],
     competitor_profiles: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """LLM 실패 시 규칙 기반으로 동일 스키마 전략 생성 (fit_level/expected_timeline 반영)."""
-    match_by_req: Dict[str, Dict[str, Any]] = {m.get("requirement", ""): m for m in internal_matches}
-
-    fit_rows: List[Dict[str, Any]] = []
-    actions: List[Dict[str, Any]] = []
-
-    for i, r in enumerate(norm_requirements):
-        m = match_by_req.get(r.text) or {}
-        score = m.get("match_score")
-        fit_level = _score_to_fit_level(score)
-        fit_id = f"F{i+1}"
-
-        if fit_level == "low_fit":
-            action = {
-                "id": f"A{i+1}",
-                "action": f"{r.text}: 외부 전문 파트너 즉시 소싱 및 협업 체계 구축",
-                "why": f"내부 적합도 낮음(fit_level={fit_level}, 매칭 점수 {score if score else 'N/A'}). 즉시 보완하지 않을 경우 제안 탈락 가능성 높음. 경쟁사는 이미 관련 레퍼런스 3건 이상 보유.",
-                "how": "1단계(1주): 전문 파트너사 3곳 선정 및 NDA 체결 → 2단계(1주): 요구사항 상세 매핑 워크샵 → 3단계(2주): 공동 솔루션 설계 및 PoC 계획 수립 → 4단계(4주): 파일럿 구축 및 검증 → 5단계(1주): 결과 문서화 및 제안서 반영",
-                "strategy_approach": "Partnership",
-                "owner": "PMO/Partnership Lead",
-                "impact": "high",
-                "urgency": "high",
-                "effort": "medium",
-                "expected_timeline": "2025년 10월~12월 (9주 소요)",
-                "expected_result": "리스크 35% 감소 → PoC 성공률 90% 달성 → 제안 경쟁력 30% 향상 → 기술 평가 점수 12점 확보 (20점 만점)",
-                "related_fit_ids": [fit_id],
-                "related_risks": ["R1", "R3"]
-            }
-        elif fit_level == "partial_fit":
-            action = {
-                "id": f"A{i+1}",
-                "action": f"{r.text}: 집중 PoC로 기술 검증 및 레퍼런스 3건 보강",
-                "why": f"부분 적합(fit_level={fit_level}, 매칭 점수 {score if score else 'N/A'}). 기본 역량은 있으나 실제 성능 입증 필요. 경쟁사 대비 레퍼런스 2건 부족.",
-                "how": "1단계(1주): 핵심 기능 2~3개 선정 및 PoC 범위 정의 → 2단계(1주): 테스트 시나리오 3종 설계 및 환경 구축 → 3단계(3주): 실제 데이터로 검증 수행 (주 1회 중간 보고) → 4단계(1주): 성능 지표 분석 및 개선 → 5단계(1주): 결과 보고서 작성 및 레퍼런스 확보 → 6단계(1주): 제안서 반영",
-                "strategy_approach": "Offensive",
-                "owner": "Tech Lead/Solution Architect",
-                "impact": "high",
-                "urgency": "medium",
-                "effort": "medium",
-                "expected_timeline": "2025년 11월~2026년 1월 (8주 소요)",
-                "expected_result": "성능 25% 개선 입증 → PoC 통과율 85% → 신규 레퍼런스 3건 확보 → 기술 평가 8점 추가 확보 → 제안 신뢰도 40% 향상",
-                "related_fit_ids": [fit_id],
-                "related_risks": ["R2", "R4"]
-            }
-        else:  # high_fit or unknown
-            action = {
-                "id": f"A{i+1}",
-                "action": f"{r.text}: 기존 레퍼런스 전략적 활용 및 제안서 최적화",
-                "why": f"적합도 양호(fit_level={fit_level}, 매칭 점수 {score if score else 'N/A'}). 이미 검증된 강점 영역으로 경쟁사 대비 우위 확보 가능.",
-                "how": "1단계(3일): 관련 레퍼런스 5~7건 선별 → 2단계(3일): 성공사례 요약본 작성 (문제/해결/성과 구조) → 3단계(2일): 핵심 지표 도식화 (before/after 비교) → 4단계(2일): 평가표 항목별 매핑 및 증빙 자료 준비 → 5단계(2일): 제안서 기술 섹션 작성 및 검토",
-                "strategy_approach": "Differentiation",
-                "owner": "Sales/Proposal Team",
-                "impact": "medium",
-                "urgency": "low",
-                "effort": "low",
-                "expected_timeline": "2025년 11월 (2주 소요)",
-                "expected_result": "기술 평가 점수 5~8점 추가 확보 → 차별화 요소 3가지 명확화 → 고객 신뢰도 20% 향상 → 제안서 완성도 90% 이상",
-                "related_fit_ids": [fit_id],
-                "related_risks": []
-            }
-
-        actions.append(action)
-        
-        # 기술 갭 원인 및 영향 분석 (1️⃣ 개선)
-        if fit_level == "low_fit":
-            gap_root_cause = f"내부 역량 부족 (적합도 점수 {score if score else '0.3'}/1.0 미만) → 관련 레퍼런스 0건 → 기술 검증 미비 → 제안 탈락 위험 60%"
-            quantitative_impact = f"기술 평가 감점 15~20점 예상, 제안 경쟁력 40% 저하, PoC 실패율 50% 이상, 추가 개발 비용 30% 증가"
-            qualitative_impact = f"고객 신뢰도 저하, 경쟁사 대비 기술 열위 인식, 향후 유지보수 리스크 증가, 인력 수급 어려움"
-            suggested_detail = f"{action['action']} - 갭 해결: 전문 파트너사 3곳 평가 (NDA 체결) → 공동 솔루션 설계 9주 → 기술 검증 완료 → 레퍼런스 확보. 예상 효과: 기술 리스크 35% 감소 → PoC 성공률 90% → 기술 평가 12점 확보 → 제안 경쟁력 30% 향상."
-        elif fit_level == "partial_fit":
-            gap_root_cause = f"부분 역량 보유 (적합도 점수 {score if score else '0.6'}/1.0) → 레퍼런스 1~2건 → 성능 입증 부족 → 차별화 약화"
-            quantitative_impact = f"기술 평가 감점 5~10점 예상, 성능 검증 부재로 신뢰도 25% 저하, PoC 실패율 20%"
-            qualitative_impact = f"경쟁사 대비 레퍼런스 부족 (당사 1~2건 vs 경쟁사 4~5건), 실제 성능 미입증, 고객 우려 존재"
-            suggested_detail = f"{action['action']} - 갭 보완: 핵심 기능 2~3개 선정 → 테스트 시나리오 3종 설계 → 8주 집중 PoC (주 1회 보고) → 성능 25% 개선 입증 → 레퍼런스 3건 확보. 예상 효과: 기술 평가 8점 추가 → 제안 신뢰도 40% 향상 → 경쟁사 대비 우위 확보."
-        else:
-            gap_root_cause = f"충분한 역량 보유 (적합도 점수 {score if score else '0.8'}/1.0 이상) → 레퍼런스 3건 이상 → 기술 검증 완료 → 강점 영역"
-            quantitative_impact = f"기술 평가 가점 5~8점 가능, 차별화 요소 2~3가지 확보 가능, 제안 경쟁력 20% 향상"
-            qualitative_impact = f"고객 신뢰도 확보, 경쟁사 대비 기술 우위, 안정적 프로젝트 수행 가능"
-            suggested_detail = f"{action['action']} - 강점 활용: 레퍼런스 5~7건 선별 → 성공사례 요약 (문제/해결/성과) → 지표 도식화 → 평가표 매핑 → 2주 제안서 반영. 예상 효과: 기술 평가 5~8점 추가 → 차별화 3가지 확립 → 제안서 완성도 90% 이상."
-        
-        fit_rows.append({
-            "id": fit_id,
-            "requirement": r.text,
-            "fit_level": fit_level,
-            "gap_root_cause": gap_root_cause,
-            "quantitative_impact": quantitative_impact,
-            "qualitative_impact": qualitative_impact,
-            "suggested_action": suggested_detail,
-            "action_ids": [action["id"]]
-        })
-
-    # 경쟁사 카운터 (2️⃣ 개선: 기술 특성 기반 정밀 대응)
-    competitor_counters: List[Dict[str, str]] = []
-    
-    for idx, (company, profile) in enumerate(list(competitor_profiles.items())[:3]):
-        sw = profile.get("swot", {})
-        
-        # 경쟁사별 고유 대응 전략 (기술 특성 반영)
-        if "삼성" in company or "SDS" in company:
-            # 삼성 SDS: Cloud SaaS, Brity Works AI
-            if sw.get("S"):
-                competitor_counters.append({
-                    "company": company,
-                    "counter": f"{company} 강점 분석: {_shorten(_to_text(sw['S']), 120)} (Brity Works AI, Cloud SaaS 전환) | 당사 대응 전략 (검증 근거 포함): 1) **성능 우위 입증**: 맞춤형 AI 파이프라인으로 정확도 5% 우수 (PoC 벤치마크 결과: 당사 92% vs Brity 87%) + 응답속도 30% 빠름 (0.5초 vs 0.7초) 2) **비용 경쟁력**: TCO 기준 3년간 15% 절감 (당사 12억 vs SDS 14.1억, 상세 산출근거 첨부) 3) **의사결정 속도**: 평균 응답 24시간 vs 48시간 (과거 5건 프로젝트 실측) 4) **맞춤형 PoC**: 고객 요구사항 부합도 90% (SDS 표준 솔루션 65%) 5) **파트너 전문성**: 검증된 AI 파트너 3곳 보유로 특화 영역 보완"
-                })
-            if sw.get("W"):
-                competitor_counters.append({
-                    "company": company,
-                    "counter": f"{company} 약점 분석: {_shorten(_to_text(sw['W']), 120)} (가격 민첩성 제한, 의사결정 단계 多) | 당사 차별화 전략 (정량 검증): 1) **가격 유연성**: 견적 조정 48시간 내 가능 vs SDS 2주 소요 + 계약 조건 3가지 옵션 제공 2) **의사결정 신속성**: 승인 단계 3단계 (당사) vs 7단계 (SDS), 의사결정 속도 2.3배 빠름 3) **커스터마이징**: 고객 요구사항 변경 시 48시간 내 수정안 제시 (SDS는 1주 소요) 4) **중소 규모 민첩성**: 프로젝트 착수 1주 vs 4주 5) **직접 소통**: 기술 책임자 직접 커뮤니케이션 (SDS는 계층적 보고 체계)"
-                })
-        
-        elif "LG" in company or "CNS" in company:
-            # LG CNS: MLOps, DAP 플랫폼
-            if sw.get("S"):
-                competitor_counters.append({
-                    "company": company,
-                    "counter": f"{company} 강점 분석: {_shorten(_to_text(sw['S']), 120)} (MLOps 내재화, DAP 플랫폼) | 당사 대응 전략 (검증 근거): 1) **AutoML 우위**: 개발 기간 40% 단축 (당사 6주 vs CNS 10주, 벤치마크 3건 평균) + 모델 정확도 동등 수준 (91% vs 92%) 2) **비용 효율**: 오픈소스 기반으로 라이선스 비용 40% 절감 (연 8천만원 절감, DAP 연 2억 vs 당사 1.2억) 3) **벤더 독립성**: 특정 플랫폼 종속 없이 multi-vendor 지원 가능 4) **운영 비용**: 클라우드 최적화로 월 운영비 25% 절감 (실측 데이터 기반) 5) **확장성**: 타 산업 적용 레퍼런스 8건 (CNS는 특정 산업 집중)"
-                })
-            if sw.get("W"):
-                competitor_counters.append({
-                    "company": company,
-                    "counter": f"{company} 약점 분석: {_shorten(_to_text(sw['W']), 120)} (민첩성 부족, 대규모 SI 중심) | 당사 차별화 전략 (정량 검증): 1) **신속한 PoC**: 2주 vs CNS 6주 (설계부터 검증까지) 2) **경량화 아키텍처**: 필수 기능 중심 구성으로 초기 구축 비용 30% 절감 3) **빠른 의사결정**: 기술 변경 승인 2일 vs 2주 4) **유연한 계약**: 단계별 계약 가능 (CNS는 일괄 계약) 5) **고객 맞춤**: 프로세스 커스터마이징 자유도 2배 (표준 프로세스 벗어난 요구사항 대응)"
-                })
-        
-        elif "현대" in company or "오토에버" in company:
-            # 현대오토에버: 차량 IoT 특화
-            if sw.get("S"):
-                competitor_counters.append({
-                    "company": company,
-                    "counter": f"{company} 강점 분석: {_shorten(_to_text(sw['S']), 120)} (차량 IoT/모빌리티 특화) | 당사 대응 전략 (검증 근거): 1) **범용 플랫폼 우위**: IoT/산업 범용 플랫폼으로 확장성 3배 (차량뿐 아니라 제조/물류/스마트시티 적용 가능, 레퍼런스 15건) 2) **타 산업 레퍼런스**: 금융 5건 + 공공 4건 + 제조 6건 = 총 15건 (오토에버는 차량 집중 8건) 3) **기술 다양성**: 10개 산업 도메인 경험으로 Best Practice 적용 가능 4) **비용 효율**: 범용 모듈 재사용으로 개발 비용 20% 절감 5) **미래 확장성**: 타 사업부 연계 시너지 (차량 외 영역 진출 시 즉시 적용)"
-                })
-            if sw.get("W"):
-                competitor_counters.append({
-                    "company": company,
-                    "counter": f"{company} 약점 분석: {_shorten(_to_text(sw['W']), 120)} (특정 산업 레퍼런스 제한, 범용 솔루션 경험 부족) | 당사 차별화 전략 (정량 검증): 1) **다양한 산업 검증**: 10개 산업 레퍼런스 vs 오토에버 차량 중심 (다양성 지수 3배) 2) **일반화된 방법론**: 산업 무관 적용 가능한 프레임워크 보유 3) **레퍼런스 신뢰도**: 공공/금융 고객사 추천서 9건 (오토에버는 차량 제조사 중심) 4) **기술 폭**: 7가지 기술 스택 vs 3가지 (AI, IoT, Cloud, Security, Big Data, Automation, DevOps) 5) **즉시 적용성**: 타 산업 검증 완료로 도입 리스크 40% 낮음"
-                })
-        else:
-            # 기타 경쟁사 (범용)
-            if sw.get("S"):
-                competitor_counters.append({
-                    "company": company,
-                    "counter": f"{company} 강점 분석: {_shorten(_to_text(sw['S']), 100)} | 당사 대응 전략: 1) 실제 성능 비교 데이터 3건 제시 → 객관적 우위 입증 2) 의사결정 속도 2배 (24시간 vs 48시간) 3) 맞춤형 PoC로 부합도 90% 4) 파트너 3곳 전문성 보완 5) TCO 15% 우위"
-                })
-            if sw.get("W"):
-                competitor_counters.append({
-                    "company": company,
-                    "counter": f"{company} 약점 분석: {_shorten(_to_text(sw['W']), 100)} | 당사 차별화: 1) 유연한 일정 조정 2) 가격 10~15% 우위 3) 민첩성 활용 맞춤형 솔루션 4) 의사결정 3단계 축소 5) 48시간 내 즉각 대응"
-                })
-
-    # 요구사항 그룹
-    groups: Dict[str, List[str]] = {}
-    for r in norm_requirements:
-        groups.setdefault(r.category, []).append(r.text)
-
-    strategy = {
-        "summary": f"총 {len(norm_requirements)}개 요구사항 중 내부 적합도 분석 결과, High Fit 영역은 기존 레퍼런스 {len([a for a in actions if a.get('strategy_approach')=='Differentiation'])}건으로 신뢰성을 강화하고, Partial Fit 영역 {len([a for a in actions if a.get('strategy_approach')=='Offensive'])}건은 8~12주 집중 PoC로 성능 25% 개선을 입증하며, Low Fit 영역 {len([a for a in actions if a.get('strategy_approach')=='Partnership'])}건은 전문 파트너사 협업으로 9주 내 보완합니다. 경쟁사 {len(competitor_counters)}개사 대비 의사결정 속도 2배, 비용 효율성 15% 우위를 확보하여 제안 경쟁력을 35%에서 65%로 향상시킵니다. 전체 일정은 Pre-Bid 4주 → PoC 8주 → Proposal 3주로 총 15주 소요 예상이며, 수주 후 6개월 내 핵심 KPI 12개 달성을 목표로 합니다.",
+    """LLM 실패 시 최소한의 오류 정보만 반환."""
+    return {
+        "summary": f"⚠️ AI 분석을 사용할 수 없습니다. 총 {len(norm_requirements)}개 요구사항이 입력되었으나, AI 모델 연결 실패로 전략을 생성하지 못했습니다.",
         "focus": {
-            "internal": f"**기술 역량 (도구+조직+프로세스)**: High Fit {len([a for a in actions if a.get('strategy_approach')=='Differentiation'])}건 - 검증된 레퍼런스 5~7건 보유, 평균 프로젝트 성공률 92% (업계 평균 78%), 기술 평가 점수 +8점 가능. **조직 역량**: 전문 인력 Pool 50명 (AI 15명, Cloud 20명, Security 10명, DevOps 5명), Tech Lead 평균 경력 12년, 자격증 보유율 85% (AWS/Azure/GCP 인증). **프로세스/품질 관리**: ISO 9001 인증, Agile/DevOps 표준 프로세스 보유, 코드 리뷰 커버리지 95%, 자동화 테스트 커버리지 80%, 배포 실패율 2% 미만 (업계 평균 8%). Partial Fit 영역은 8주 PoC로 성능 25% 개선 (응답속도 1.2초→0.9초) 입증. Low Fit 영역은 파트너 3곳 (보안 인증 전문, AI 모델링 전문, Legacy 마이그레이션 전문) 협업으로 9주 내 보완.",
-            "competitor": f"**경쟁사별 정밀 대응 (기술 특성 기반)**: 삼성 SDS - Brity Works AI 대응으로 맞춤형 AI 파이프라인 정확도 5% 우위 (92% vs 87%, PoC 검증) + TCO 15% 절감 (12억 vs 14.1억, 3년 기준) + 의사결정 2배 빠름 (24시간 vs 48시간). LG CNS - DAP 플랫폼 대응으로 오픈소스 기반 라이선스 비용 40% 절감 (연 8천만원) + AutoML로 개발 기간 40% 단축 (6주 vs 10주) + 벤더 독립성 확보. 현대오토에버 - 차량 특화 vs 당사 범용 플랫폼 확장성 3배 + 타 산업 레퍼런스 15건 vs 8건 + 기술 다양성 7개 스택 vs 3개. **종합**: 경쟁사 평균 제안 기간 20주 대비 당사 15주 (25% 단축), 비용 효율성 12~18% 우위, 의사결정 속도 2.1배, 맞춤형 대응력 3배.",
-            "market": "**시장 트렌드 연계 (타이밍 논리)**: 2025년 정부 디지털 전환 예산 15조원 (전년 대비 +22%), 공공 클라우드 의무화 법안 시행 (2025.7월) → 클라우드 전환 수요 급증 (공공 60%, 금융 45% 전환율 예상). AI/생성형 AI 시장 연평균 34% 성장 (2025~2028), 기업 AI 도입률 2024년 28% → 2025년 42% 예상 (Gartner). **산업별 디지털 트렌드**: 제조 - 스마트팩토리 보급률 2025년 35% 목표 (현재 22%), 금융 - 디지털 뱅킹 고객 비율 2025년 78% (현재 54%), 공공 - 전자정부 서비스 통합 100개 기관 확대. **당사 대응**: 이러한 정책/시장 흐름을 제안서에 정량 반영 → 향후 3년간 시장 성장률 30% 활용 → 시스템 확장성 200% 보장 → 운영 비용 30% 절감 시나리오 제시 → 정부 정책 부합도 95% 입증 → 미래 확장 계획 5개년 로드맵 첨부."
+            "internal": "AI 분석 실패로 내부 역량 분석을 수행하지 못했습니다.",
+            "competitor": f"AI 분석 실패로 경쟁사 {len(competitor_profiles)}개사에 대한 대응 전략을 생성하지 못했습니다.",
+            "market": "AI 분석 실패로 시장 트렌드 분석을 수행하지 못했습니다."
         },
-        "prioritized_actions": actions[:10],
+        "prioritized_actions": [],
         "roadmap": {
-            "phase_0_prebid": [
-                {
-                    "task": "레퍼런스 큐레이션 및 검증 (담당: Sales 3명/PM 1명, 2주, Week 1~2)",
-                    "related_actions": [a["id"] for a in actions[:3]],
-                    "dependencies": [],
-                    "parallel_tasks": ["보안 인증 점검", "파트너사 선정"],
-                    "resources": "Sales 3명 (full-time) + PM 1명 (full-time)",
-                    "milestones": "Week 1: 후보 레퍼런스 10건 리스트업, Week 2: 최종 5~7건 확정 및 검증 완료",
-                    "expected_outcome": "유사 프로젝트 레퍼런스 5~7건 확보 → 고객 신뢰도 40% 향상 → IR 자료 완성도 95% 달성 → 초기 평가 통과율 85%"
-                },
-                {"task": "고객 요구사항 상세 매핑 워크샵 (담당: Tech Lead 2명, 1주, Week 1)", "related_actions": [a["id"] for a in actions[:2]], "dependencies": [], "parallel_tasks": ["레퍼런스 큐레이션"], "resources": "Tech Lead 2명 + BA 1명", "milestones": "Week 1: 요구사항 매핑 100% 완료", "expected_outcome": "요구사항 100% 매핑 완료 → 기술 적합도 점수 산출 → 갭 영역 3~5개 식별 → 보완 전략 수립"},
-                {"task": "보안/인증 선제 점검 및 대응 (담당: Security 2명, 1주, Week 1~2)", "related_actions": [], "dependencies": [], "parallel_tasks": ["레퍼런스 큐레이션", "요구사항 매핑"], "resources": "Security Specialist 2명 (50%)", "milestones": "Week 2: ISMS-P 체크리스트 100% 완료", "expected_outcome": "ISMS-P 체크리스트 100% 대비 → 필수 인증 3종 사전 확보 → 보안 리스크 35% 감소"},
-                {"task": "파트너사 선정 및 협업 체계 구축 (담당: Partnership 1명, 1주, Week 2)", "related_actions": [a["id"] for a in actions if 'Partnership' in str(a.get('strategy_approach', ''))], "dependencies": ["요구사항 매핑 완료"], "parallel_tasks": ["보안 인증 점검"], "resources": "Partnership Manager 1명", "milestones": "Week 2: 파트너 1곳 선정 및 NDA 체결", "expected_outcome": "검증된 파트너사 3곳 평가 → 최적 1곳 선정 및 NDA 체결 → 공동 제안 체계 확립"}
-            ],
-            "phase_1_poc": [
-                {"task": "핵심 요구사항 2~3개 축소 범위 PoC 설계 (담당: Solution Architect 2명, 1주, Week 3)", "related_actions": [a["id"] for a in actions[:5]], "dependencies": ["요구사항 매핑 완료", "레퍼런스 분석 완료"], "parallel_tasks": [], "resources": "Solution Architect 2명 + Tech Lead 1명", "milestones": "Week 3: PoC 설계 문서 완성, 성공 기준 10개 정의", "expected_outcome": "PoC 범위 명확화 → 테스트 시나리오 5종 설계 → 성공 기준 10개 정의 → 일정 및 리소스 계획 수립"},
-                {"task": "PoC 환경 구축 및 검증 수행 (담당: Tech 5명, 4주, Week 4~7)", "related_actions": [a["id"] for a in actions], "dependencies": ["PoC 설계 완료"], "parallel_tasks": [], "resources": "Tech Lead 1명 + 개발자 4명 (full-time)", "milestones": "Week 5: 환경 구축 완료, Week 6: 중간 점검 (성공률 70% 이상), Week 7: PoC 최종 검증", "expected_outcome": "파일럿 환경 2주 내 구축 → 실제 데이터 기반 검증 2주 수행 → PoC 성공률 90% 달성 → 성능 25% 개선 입증"},
-                {"task": "PoC 결과 분석 및 보고서 작성 (담당: PM/Tech Lead, 1주, Week 8)", "related_actions": [], "dependencies": ["PoC 완료"], "parallel_tasks": ["레퍼런스 확보"], "resources": "PM 1명 + Tech Lead 1명 + Data Analyst 1명", "milestones": "Week 8: 분석 보고서 완성", "expected_outcome": "정량적 성능 지표 15개 도출 → Before/After 비교 분석 → 경쟁사 대비 우위 3가지 입증 → 고객 검증 보고서 작성"},
-                {"task": "신규 레퍼런스 확보 및 검증 (담당: Sales 2명, 1주, Week 8)", "related_actions": [a["id"] for a in actions[:3]], "dependencies": ["PoC 완료"], "parallel_tasks": ["결과 분석"], "resources": "Sales 2명", "milestones": "Week 8: 레퍼런스 3건 이상 확보", "expected_outcome": "PoC 결과 기반 레퍼런스 3건 확보 → 고객 추천서 획득 → 기술 검증 완료 인증서 확보"},
-                {"task": "KPI 측정 체계 확립 및 모니터링 (담당: PMO, 1주, Week 8)", "related_actions": [], "dependencies": ["PoC 완료"], "parallel_tasks": [], "resources": "PMO 1명 + Data Engineer 1명", "milestones": "Week 8: KPI 대시보드 가동", "expected_outcome": "핵심 KPI 12개 정의 → 측정 도구 및 대시보드 구축 → 주간 모니터링 체계 확립 → 목표 대비 진척률 95% 이상"}
-            ],
-            "phase_2_proposal": [
-                {"task": "차별화 포인트 도식화 및 증빙 자료 작성 (담당: Proposal 3명, 1주, Week 9~10)", "related_actions": [a["id"] for a in actions[:4]], "dependencies": ["PoC 완료", "레퍼런스 확보"], "parallel_tasks": ["비용 시나리오 작성"], "resources": "Proposal Writer 2명 + Designer 1명", "milestones": "Week 10: 증빙 자료 20종 완성", "expected_outcome": "차별화 요소 5가지 명확화 → 증빙 자료 20종 준비 → 평가표 항목별 매핑 → 차별화 점수 85점 이상 확보"},
-                {"task": "비용 및 일정 최적화 시나리오 작성 (담당: PM/Finance, 4일, Week 9)", "related_actions": [], "dependencies": ["PoC 완료"], "parallel_tasks": ["차별화 포인트 작성"], "resources": "PM 1명 + Finance 1명", "milestones": "Week 9: TCO 분석 완료", "expected_outcome": "TCO 분석 완료 → 경쟁사 대비 10~15% 절감안 제시 → 일정 단축 2가지 옵션 제시 → ROI 분석 포함"},
-                {"task": "기술 제안서 작성 및 검토 (담당: Tech Writer 2명, 1주, Week 10~11)", "related_actions": [a["id"] for a in actions], "dependencies": ["차별화 포인트 완성", "증빙 자료 준비"], "parallel_tasks": [], "resources": "Tech Writer 2명 + Reviewer 2명", "milestones": "Week 11: 기술 섹션 완성, 내부 검토 3회 완료", "expected_outcome": "기술 섹션 완성도 95% → 레퍼런스 및 증빙 자료 통합 → 평가 항목 100% 대응 → 내부 검토 3회 완료"},
-                {"task": "리스크 관리 계획 및 대응 방안 수립 (담당: PMO, 3일, Week 11)", "related_actions": [], "dependencies": ["기술 제안서 초안 완성"], "parallel_tasks": ["프레젠테이션 준비"], "resources": "PMO 1명 + Risk Manager 1명", "milestones": "Week 11: 리스크 매트릭스 완성", "expected_outcome": "식별된 리스크 8~10개 → 각 리스크별 Plan A/B 수립 → 리스크 매트릭스 작성 → 예비 대응 자원 확보"},
-                {"task": "최종 제안서 통합 및 프레젠테이션 준비 (담당: All, 3일, Week 11~12)", "related_actions": [], "dependencies": ["모든 섹션 완성"], "parallel_tasks": [], "resources": "전체 팀원 (리뷰 및 리허설)", "milestones": "Week 12: 제안서 최종본 완성, 리허설 2회 완료", "expected_outcome": "제안서 최종 완성 → 발표 자료 30p 작성 → 예상 질의응답 20개 준비 → 최종 리허설 2회 완료"}
-            ]
-        },
-        "risks": [
-            {
-                "id": "R1",
-                "risk": "보안 인증 지연으로 PoC 일정 2주 지연 → 제안서 제출 기한 촉박 → 완성도 80% 미만 → 기술 평가 15점 감점",
-                "likelihood": "medium",
-                "impact": "high",
-                "mitigation": "Plan A (예방): 1) 필수 인증 3종 사전 확보 (Week -4 착수) → 2) 보안 전담 인력 2명 배치 → 3) 외부 인증 컨설턴트 on-call 계약 → 4) 주간 점검 회의 (매주 금요일) → 5) 긴급 대응 프로세스 수립 (24시간 내 대응)",
-                "plan_b": "Plan B (대안): 인증 지연 시 → 1) 인증 면제 가능 항목으로 PoC 범위 조정 (70%로 축소) → 2) 사후 인증 계획 제시 (수주 후 3개월 내) → 3) 외부 보안 전문가 리뷰 의견서 첨부로 신뢰도 확보 → 4) 일정 1주 단축 (병행 작업 증가) → 5) 제안서 기술 섹션 우선 완성",
-                "trigger_condition": "Week 6 점검 시 인증 진행률 70% 미만인 경우 Plan B 즉시 발동",
-                "mitigation_action_ids": []
+            "phase_0_prebid": {
+                "duration": "N/A",
+                "objective": "AI 분석 실패",
+                "why": "AI 모델에 연결할 수 없어 로드맵을 생성하지 못했습니다.",
+                "key_deliverables": [],
+                "expected_outcome": "N/A",
+                "related_actions": []
             },
-            {
-                "id": "R2",
-                "risk": "PoC 범위 과대로 성공 기준 미달 (달성률 50% 이하) → 기술 평가 20점 감점 → 제안 탈락 가능성 60%",
-                "likelihood": "medium",
-                "impact": "high",
-                "mitigation": "Plan A (예방): 1) 핵심 기능 2~3개로 범위 명확 제한 (고객 합의) → 2) 성공 기준 사전 합의 (Week 0) → 3) 주간 진척률 모니터링 (목표 대비 90% 이상) → 4) 중간 점검 2회 (Week 2, 4) → 5) 범위 조정 권한 PM 위임",
-                "plan_b": "Plan B (대안): PoC 중간 점검 실패 시 → 1) 성공 가능한 핵심 1개 기능으로 즉시 축소 → 2) 나머지 기능은 시뮬레이션 데모로 대체 → 3) 성공률 80% 이상 보장 → 4) 미완료 기능은 수주 후 추가 검증 계획 제시 → 5) 일정 영향 1주 이내",
-                "trigger_condition": "Week 4 중간 점검 시 PoC 성공률 70% 미만",
-                "mitigation_action_ids": []
+            "phase_1_poc": {
+                "duration": "N/A",
+                "objective": "AI 분석 실패",
+                "why": "AI 모델에 연결할 수 없어 로드맵을 생성하지 못했습니다.",
+                "key_deliverables": [],
+                "expected_outcome": "N/A",
+                "related_actions": []
             },
-            {
-                "id": "R3",
-                "risk": "핵심 기술 인력 이탈 (2명 이상) → PoC 품질 저하 (완성도 70% 미만) → 기술 검증 실패 → 신뢰도 40% 하락",
-                "likelihood": "low",
-                "impact": "high",
-                "mitigation": "Plan A (예방): 1) 백업 인력 3명 사전 지정 및 교육 (Week -2) → 2) 지식 이관 문서화 (주 1회 업데이트) → 3) 페어 프로그래밍 의무화 → 4) 외부 전문가 풀 5명 확보 → 5) 인센티브 제도 (성공 시 +20%)",
-                "plan_b": "Plan B (대안): 인력 이탈 발생 시 → 1) 백업 인력 즉시 투입 (24시간 내) → 2) 외부 전문가 긴급 투입 (3일 내) → 3) PoC 범위 70%로 축소 → 4) 일정 1주 연장 협의 → 5) 품질 검증 기준 조정 (필수 80%, 권장 50%)",
-                "trigger_condition": "핵심 인력 1명 이상 이탈 의사 표명 시 즉시",
-                "mitigation_action_ids": []
-            },
-            {
-                "id": "R4",
-                "risk": "경쟁사 가격 덤핑 (당사 대비 20% 이상 저가) → 가격 경쟁력 상실 → 가격 평가 0점 → 종합 평가 탈락",
-                "likelihood": "medium",
-                "impact": "medium",
-                "mitigation": "Plan A (예방): 1) TCO 기반 비용 분석 사전 준비 → 2) 3년간 총소유비용 15% 절감 입증 → 3) 성능/품질 가치 35% 우수 강조 → 4) 계약 조건 2안 (초기 할인 or 장기 할인) → 5) 파트너십 혜택 제안",
-                "plan_b": "Plan B (대안): 가격 경쟁 심화 시 → 1) 견적 10% 추가 조정 (최소 마진 유지선) → 2) 무상 PoC 확대 제공 (2개월 → 3개월) → 3) 추가 기술 지원 1년 무상 제공 → 4) 성능 보장 SLA 추가 (미달 시 페널티) → 5) 장기 계약 조건 시 15% 추가 할인",
-                "trigger_condition": "경쟁사 견적이 당사 대비 15% 이상 저가인 것으로 파악될 경우",
-                "mitigation_action_ids": []
-            },
-            {
-                "id": "R5",
-                "risk": "고객 요구사항 변경 (30% 이상) → 제안 내용 대폭 수정 (재작업 40%) → 일정 3주 지연 → 완성도 저하",
-                "likelihood": "low",
-                "impact": "medium",
-                "mitigation": "Plan A (예방): 1) 요구사항 동결 시점 명확 합의 (Week 0) → 2) 변경 관리 프로세스 (영향도 평가) → 3) 예비 버퍼 2주 확보 → 4) 모듈화 설계로 변경 영향 최소화 → 5) 주간 고객 리뷰 미팅",
-                "plan_b": "Plan B (대안): 요구사항 변경 시 → 1) 변경 영향도 즉시 분석 (24시간 내) → 2) 핵심 변경만 반영, 부차적 변경은 Phase 2로 연기 → 3) 추가 리소스 투입 (인력 +2명, 1주) → 4) 고객과 우선순위 재협의 → 5) 일정 영향 1주 이내로 제한",
-                "trigger_condition": "요구사항 변경률이 20% 이상으로 파악될 경우",
-                "mitigation_action_ids": []
+            "phase_2_proposal": {
+                "duration": "N/A",
+                "objective": "AI 분석 실패",
+                "why": "AI 모델에 연결할 수 없어 로드맵을 생성하지 못했습니다.",
+                "key_deliverables": [],
+                "expected_outcome": "N/A",
+                "related_actions": []
             }
-        ],
-        "kpis": [
-            {"name": "PoC 성공 기준 달성률", "target": "90% 이상, 2025년 12월까지", "baseline": "과거 PoC 평균 75% (최근 3개 프로젝트 기준)", "measurement_method": "사전 정의된 성공 기준 10개 항목 중 9개 이상 달성 여부 측정", "related_actions": [a["id"] for a in actions[:5]]},
-            {"name": "제안서 기술 평가 점수", "target": "85점 이상 (100점 만점), 경쟁사 대비 상위 10%", "baseline": "전년도 평균 72점, 경쟁사 평균 76점", "measurement_method": "RFP 평가표 기술 항목 점수 합산 (가중치 반영)", "related_actions": [a["id"] for a in actions[:3]]},
-            {"name": "시스템 처리 성능 (TPS)", "target": "2,600 TPS (현재 대비 30% 개선), 2025년 12월", "baseline": "현재 2,000 TPS (JMeter 부하 테스트), 경쟁사 평균 2,200 TPS", "measurement_method": "Apache JMeter 부하 테스트, 동시 사용자 1,000명 기준, p95 응답시간 측정", "related_actions": [a["id"] for a in actions[:4]]},
-            {"name": "API 응답 속도", "target": "0.5초 이하 (58% 개선), p95 기준", "baseline": "현재 1.2초 (p95), 경쟁사 평균 0.8초, 업계 표준 0.6초", "measurement_method": "Prometheus + Grafana 모니터링, 7일 연속 측정 후 p95 값 산출", "related_actions": [a["id"] for a in actions[:3]]},
-            {"name": "레퍼런스 확보 건수", "target": "8건 이상 (유사 프로젝트 5건 + 신규 PoC 3건)", "baseline": "현재 4건 (검증 완료된 프로젝트)", "measurement_method": "고객 추천서 또는 검증 완료 인증서 보유 기준", "related_actions": [a["id"] for a in actions[:4]]},
-            {"name": "프로젝트 일정 준수율", "target": "95% 이상 (주요 마일스톤 15개 중 14개 이상 준수)", "baseline": "과거 평균 82% (최근 5개 프로젝트)", "measurement_method": "주요 마일스톤 15개 각각의 목표 날짜 대비 실제 완료 날짜 비교, ±3일 이내 준수로 판정", "related_actions": [a["id"] for a in actions]},
-            {"name": "비용 효율성 (TCO)", "target": "경쟁사 대비 TCO 10~15% 절감", "baseline": "경쟁사 평균 견적 기준 (3년간 총 비용)", "measurement_method": "초기 투자 비용 + 3년간 운영 비용 + 유지보수 비용 합산 후 경쟁사와 비교", "related_actions": [a["id"] for a in actions[:2]]},
-            {"name": "고객 만족도", "target": "4.5점 이상 (5점 만점), PoC 종료 시점 측정", "baseline": "과거 평균 3.8점 (최근 3개 프로젝트)", "measurement_method": "PoC 종료 시 고객 설문조사 10개 항목 (5점 척도), 평균 산출", "related_actions": [a["id"] for a in actions]},
-            {"name": "기술 리스크 감소율", "target": "35% 이상 감소 (초기 리스크 평가 대비)", "baseline": "초기 평가 high risk 10개, medium risk 8개", "measurement_method": "리스크 매트릭스 기반 (likelihood × impact 점수 합산), 사전/사후 비교", "related_actions": [a["id"] for a in actions]},
-            {"name": "차별화 요소 확보", "target": "경쟁사 대비 5가지 이상 명확한 차별화 포인트", "baseline": "현재 2가지 (레퍼런스, 가격)", "measurement_method": "차별화 체크리스트 10개 항목 중 경쟁사와 명확히 구별되는 항목 수", "related_actions": [a["id"] for a in actions[:4]]},
-            {"name": "제안 경쟁력 지수", "target": "65점 이상 (자체 평가 기준 100점 만점)", "baseline": "현재 35점 (기술 15 + 가격 10 + 레퍼런스 5 + 신뢰도 5)", "measurement_method": "기술(30) + 가격(25) + 레퍼런스(20) + 신뢰도(15) + 차별화(10) 가중 합산", "related_actions": [a["id"] for a in actions]},
-            {"name": "파트너 협업 효율성", "target": "공동 작업 일정 준수율 90% 이상", "baseline": "과거 평균 70% (파트너 프로젝트 3건 평균)", "measurement_method": "공동 마일스톤 10개 중 준수 개수 (±3일 기준)", "related_actions": [a["id"] for a in actions if 'Partnership' in str(a.get('strategy_approach', ''))]},
-            {"name": "수주 확률 향상", "target": "35%에서 60%로 증가 (71% 향상)", "baseline": "현재 35% (유사 RFP 5건 평균 수주율)", "measurement_method": "제안 경쟁력 지수 기반 확률 모델 (과거 데이터 회귀 분석)", "related_actions": [a["id"] for a in actions]}
-        ],
-        "differentiation": [
-            "**레퍼런스 우위 (정량)**: 검증된 유사 프로젝트 레퍼런스 8건 보유 (경쟁사 평균 4건 대비 2배) + 고객 추천서 9건 + 프로젝트 성공률 92% (업계 평균 78%) + 평균 고객 만족도 4.6/5.0",
-            "**기술 성능 (검증 근거)**: PoC 벤치마크 결과 - 처리 성능 30% 우수 (2,600 TPS vs 경쟁사 평균 2,000 TPS) + API 응답속도 58% 빠름 (0.5초 vs 1.2초, p95 기준) + AI 모델 정확도 5% 우위 (92% vs 87%) + 시스템 가용성 99.95% (경쟁사 99.5%)",
-            "**비용 효율성 (TCO 산출)**: 3년간 TCO 12~18% 절감 (초기 투자 10% 낮음 + 운영비 25% 절감 + 유지보수 15% 절감) + 클라우드 최적화로 월 300만원 비용 감소 + ROI 18개월 (경쟁사 평균 24개월)",
-            "**의사결정/대응 속도 (실측)**: 평균 응답시간 24시간 vs 경쟁사 48시간 (과거 10건 프로젝트 실측) + 견적 조정 48시간 vs 2주 + 기술 변경 승인 2일 vs 10일 + 긴급 이슈 대응 4시간 vs 24시간 + 프로젝트 착수 1주 vs 4주",
-            "**조직/프로세스 역량 (품질 관리)**: ISO 9001/27001 인증 + 전문 인력 Pool 50명 (평균 경력 12년) + 자격증 보유율 85% + 코드 품질 (리뷰 95%, 테스트 80%) + 배포 실패율 2% (업계 8%) + Agile/DevOps 성숙도 Level 4 (5단계 중)",
-            "**고객 맞춤형 대응 (부합도)**: 요구사항 부합도 90% (경쟁사 표준 솔루션 65%) + 커스터마이징 자유도 2배 + PoC 성공률 90% (경쟁사 70%) + 고객 요구사항 변경 대응 48시간 (경쟁사 1주)",
-            "**파트너 생태계 (전문성 보완)**: 검증된 전문 파트너 3곳 보유 (보안 인증, AI 모델링, Legacy 마이그레이션) + 파트너 프로젝트 성공률 88% + 협업 일정 준수율 90% (경쟁사 70%) + 공동 제안 경험 12건",
-            "**계약 유연성 (고객 선택권)**: 계약 조건 3가지 옵션 제공 (초기 투자 최소화 / 장기 할인 / 성과 기반 지불) + 단계별 계약 가능 (PoC → 구축 → 운영) + 중도 해지 위약금 50% 경감 + 무상 기술 지원 1년 제공",
-            "**SLA 보장 (리스크 제거)**: 6개월 내 핵심 KPI 12개 달성 보장 + 성능 미달 시 페널티 조항 (목표치 90% 미만 시 월 5% 환급) + 시스템 가용성 99.9% 보장 (미달 시 SLA 크레딧) + 장애 대응 시간 4시간 이내 보장",
-            "**지속 가능성 (미래 확장)**: 향후 3년간 기술 업그레이드 무상 지원 + 시스템 확장성 200% 보장 (현재 처리량 대비) + 타 시스템 연계 인터페이스 10개 사전 제공 + 클라우드 마이그레이션 지원 포함 + 최신 기술 트렌드 반영 (분기별 업데이트)"
-        ],
+        },
+        "risks": [],
+        "kpis": [],
+        "differentiation": [],
         "appendix": {
-            "requirement_groups": [{"category": k, "items": v} for k, v in groups.items()],
-            "fit_table": fit_rows,
-            "competitor_counters": competitor_counters
-        }
+            "requirement_groups": [],
+            "fit_table": [],
+            "competitor_counters": []
+        },
+        "error": True,
+        "error_message": "AI 모델 연결 실패로 전략을 생성할 수 없습니다."
     }
-
-    # 리스크-액션 매핑 보정 (구체적 연결)
-    for r in strategy["risks"]:
-        if r["id"] == "R1":
-            # 보안 관련 액션 찾기
-            security_actions = [a["id"] for a in actions if ("보안" in a["action"] or "인증" in a["action"] or "ISMS" in a.get("how", ""))]
-            r["mitigation_action_ids"] = security_actions if security_actions else [actions[0]["id"]]
-        elif r["id"] == "R2":
-            # PoC 관련 액션 찾기
-            poc_actions = [a["id"] for a in actions if ("PoC" in a["action"] or "검증" in a["action"])]
-            r["mitigation_action_ids"] = poc_actions if poc_actions else [a["id"] for a in actions[:2]]
-        elif r["id"] == "R3":
-            # 인력 관련 액션 찾기 (파트너십 또는 고 effort)
-            hr_actions = [a["id"] for a in actions if (a.get("strategy_approach") == "Partnership" or a.get("effort") == "high")]
-            r["mitigation_action_ids"] = hr_actions if hr_actions else [a["id"] for a in actions[:2]]
-        elif r["id"] == "R4":
-            # 비용 관련 액션 찾기
-            cost_actions = [a["id"] for a in actions if (a.get("strategy_approach") == "Differentiation")]
-            r["mitigation_action_ids"] = cost_actions if cost_actions else [a["id"] for a in actions[:3]]
-        elif r["id"] == "R5":
-            # 범위 관리 관련 액션 찾기
-            scope_actions = [a["id"] for a in actions if ("요구사항" in a.get("why", "") or a.get("impact") == "high")]
-            r["mitigation_action_ids"] = scope_actions if scope_actions else [a["id"] for a in actions[:2]]
-
-    return strategy
 
 
 # ======================
@@ -854,9 +629,12 @@ def _generate_deal_brief(strategy: Dict[str, Any]) -> str:
         *(_bullet_actions(actions, 5)),
         "",
         "## 4) 로드맵",
-        f"- **Pre-Bid**: {', '.join([i.get('task','') if isinstance(i,dict) else str(i) for i in roadmap.get('phase_0_prebid', [])]) or '-'}",
-        f"- **PoC**: {', '.join([i.get('task','') if isinstance(i,dict) else str(i) for i in roadmap.get('phase_1_poc', [])]) or '-'}",
-        f"- **Proposal**: {', '.join([i.get('task','') if isinstance(i,dict) else str(i) for i in roadmap.get('phase_2_proposal', [])]) or '-'}",
+        f"- **Pre-Bid ({roadmap.get('phase_0_prebid', {}).get('duration', '4주')})**: {roadmap.get('phase_0_prebid', {}).get('objective', '-')}",
+        f"  └ {roadmap.get('phase_0_prebid', {}).get('expected_outcome', '-')}",
+        f"- **PoC ({roadmap.get('phase_1_poc', {}).get('duration', '8주')})**: {roadmap.get('phase_1_poc', {}).get('objective', '-')}",
+        f"  └ {roadmap.get('phase_1_poc', {}).get('expected_outcome', '-')}",
+        f"- **Proposal ({roadmap.get('phase_2_proposal', {}).get('duration', '3주')})**: {roadmap.get('phase_2_proposal', {}).get('objective', '-')}",
+        f"  └ {roadmap.get('phase_2_proposal', {}).get('expected_outcome', '-')}",
         "",
         "## 5) 리스크 & 대응",
         *(_risk_lines(risks, 5)),
@@ -907,8 +685,8 @@ def strategy_synthesizer(
     # 3) LLM 호출 or 폴백
     try:
         if is_llm_available():
-            # temperature를 높여서 더 상세한 응답 유도
-            result_text = call_llm(prompt, temperature=0.7)
+            # temperature를 높이고 max_tokens 충분히 확보하여 상세한 응답 유도
+            result_text = call_llm(prompt, temperature=0.8, max_tokens=16000)
             print(f"[전략 합성 v3.1] LLM 응답 길이: {len(result_text) if result_text else 0} 문자")
             
             if result_text:
@@ -927,36 +705,41 @@ def strategy_synthesizer(
                         print(f"    - 현재: 경쟁사 대응 {len(competitor_counters)}개, 액션 {len(actions)}개")
                         
                         # 더 강력한 프롬프트로 재시도
-                        enhanced_prompt = f"""{prompt}
+                        enhanced_prompt = f"""
+🚨🚨🚨🚨🚨 STOP! 이전 응답 거부됨! 🚨🚨🚨🚨🚨
 
-⚠️⚠️⚠️ 최종 경고: 이전 응답이 너무 간단하여 거부되었습니다!
+거부 이유: 
+- competitor_counters: {len(competitor_counters)}개 (필요: 6개 이상) ❌
+- prioritized_actions: {len(actions)}개 (필요: 10개 이상) ❌
 
-필수 요구사항 (반드시 충족):
+🔥🔥🔥 지금부터 다시 작성하세요. 반드시 아래 개수를 충족하세요:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. competitor_counters: 최소 6개 이상 (각 경쟁사당 2개 이상)
-   - 삼성 SDS 대응 전략 2개 이상 (Brity Works AI 구체적 대응)
-   - LG CNS 대응 전략 2개 이상 (DAP 플랫폼 구체적 대응)
-   - 현대오토에버 대응 전략 2개 이상 (모빌리티 플랫폼 구체적 대응)
 
-2. prioritized_actions: 최소 10개 이상
-   - Impact, Urgency, Effort 모두 명시
-   - why, how, strategy_approach 모두 상세히 작성
-   - expected_result에 구체적 수치 포함
+1️⃣ competitor_counters: 6개 이상 생성
+   → {{"company": "삼성 SDS", "counter": "강점 대응 1: Brity Works AI 대비..."}}
+   → {{"company": "삼성 SDS", "counter": "약점 활용 2: 의사결정 속도 2.3배..."}}
+   → {{"company": "LG CNS", "counter": "강점 대응 1: DAP 플랫폼 대비..."}}
+   → {{"company": "LG CNS", "counter": "약점 활용 2: 민첩성 우위..."}}
+   → {{"company": "현대오토에버", "counter": "강점 대응 1: 모빌리티 대비..."}}
+   → {{"company": "현대오토에버", "counter": "약점 활용 2: 범용성 우위..."}}
 
-3. 각 대응 전략의 필수 포함 요소:
-   - 경쟁사 제품/서비스 구체적 명칭
-   - 정량적 비교 수치 (예: "30% 우수", "비용 15% 절감")
-   - 검증 근거 (PoC, 벤치마크, 실측 데이터)
-   - 측정 기준 명시 (예: "p95 기준", "동일 부하 테스트")
+2️⃣ prioritized_actions: 10개 이상 생성
+   → A1, A2, A3, A4, A5, A6, A7, A8, A9, A10 최소 10개
+   → 각각 why, how, strategy_approach, expected_result 모두 포함
 
-예시 (이렇게 상세하게 작성):
-{{"company": "삼성 SDS", "counter": "강점 1: Brity Works AI 대비 당사 맞춤형 AI - 개발 속도 +40% (6주 vs 10주, 벤치마크 3건), 장애율 -35% (월 2건 vs 3.5건, 최근 6개월 실측), 정확도 +5% (92% vs 87%, PoC 검증 데이터). 약점 공략: 의사결정 속도 (승인 3단계 vs 7단계, 2.3배 빠름) + 비용 (TCO 15% 절감, 12억 vs 14.1억)"}}
-{{"company": "삼성 SDS", "counter": "강점 2: Agile 조직 구조로 변경 대응 48시간 vs 삼성 SDS 10일 (실측 12건 프로젝트) + 커스터마이징 자유도 2배 (표준 솔루션 제약 없음) + PoC 성공률 90% vs 70%"}}
+3️⃣ kpis: 12개 이상 생성
+4️⃣ risks: 5개 이상 생성  
+5️⃣ differentiation: 10개 이상 생성
 
-지금 즉시 위 조건을 만족하는 매우 상세한 JSON을 생성하세요!
+🚨 위 개수를 채우지 못하면 다시 거부됩니다!
+
+원래 요청:
+{prompt}
+
+지금 즉시 위 개수를 충족하는 JSON을 생성하세요!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
                         
-                        result_text = call_llm(enhanced_prompt, temperature=0.9, max_tokens=8000)
+                        result_text = call_llm(enhanced_prompt, temperature=0.95, max_tokens=16000)
                         if result_text:
                             strategy_data_retry = parse_json_response(result_text)
                             if isinstance(strategy_data_retry, dict):
@@ -971,11 +754,21 @@ def strategy_synthesizer(
                                 else:
                                     print("[전략 합성 v3.1] ⚠️ 재시도 실패: 여전히 간단함 → 폴백 사용")
                                     fb = _fallback_strategy(norm_requirements, internal_matches, competitor_profiles)
-                                    return {"strategy": fb, "deal_brief": _generate_deal_brief(fb)}
+                                    return {
+                                        "strategy": fb, 
+                                        "deal_brief": _generate_deal_brief(fb),
+                                        "status": "error",
+                                        "message": "❌ AI 응답이 불충분하여 전략을 생성하지 못했습니다. AI 모델이 정상적으로 작동하지 않았거나 응답 품질이 기준에 미달했습니다. (경쟁사 대응 6개 이상, 액션 8개 이상 필요)"
+                                    }
                     
                     print("[전략 합성 v3.1] ✅ AI 분석 완료")
                     deal_brief = _generate_deal_brief(strategy_data)
-                    return {"strategy": strategy_data, "deal_brief": deal_brief}
+                    return {
+                        "strategy": strategy_data, 
+                        "deal_brief": deal_brief,
+                        "status": "success",
+                        "message": "✅ AI 기반 전략 분석이 성공적으로 완료되었습니다."
+                    }
                 else:
                     print("[전략 합성 v3.1] ⚠️ JSON 파싱 실패 → 폴백")
             else:
@@ -986,12 +779,31 @@ def strategy_synthesizer(
         # 폴백 생성 (이미 상세하게 개선됨)
         print("[전략 합성 v3.1] 폴백 전략 사용 (상세 모드)")
         fb = _fallback_strategy(norm_requirements, internal_matches, competitor_profiles)
-        return {"strategy": fb, "deal_brief": _generate_deal_brief(fb)}
+        
+        # LLM 미가용 이유 판단
+        if not is_llm_available():
+            error_msg = "❌ AI 모델에 연결할 수 없습니다. API 키 설정을 확인하거나 네트워크 연결 상태를 점검해주세요."
+        elif not result_text:
+            error_msg = "❌ AI 모델이 응답하지 않았습니다. 잠시 후 다시 시도해주세요."
+        else:
+            error_msg = "❌ AI 응답을 JSON으로 파싱할 수 없습니다. AI 모델의 응답 형식이 올바르지 않습니다."
+        
+        return {
+            "strategy": fb, 
+            "deal_brief": _generate_deal_brief(fb),
+            "status": "fallback",
+            "message": error_msg
+        }
 
     except Exception as e:
         print(f"[전략 합성 v3.1] ❌ 예외 발생: {e}")
         fb = _fallback_strategy(norm_requirements, internal_matches, competitor_profiles)
-        return {"strategy": fb, "deal_brief": _generate_deal_brief(fb)}
+        return {
+            "strategy": fb, 
+            "deal_brief": _generate_deal_brief(fb),
+            "status": "error",
+            "message": f"❌ 오류 발생: {str(e)}. 전략을 생성할 수 없습니다."
+        }
 
 
 # ======================
@@ -1034,4 +846,5 @@ if __name__ == "__main__":
 
     print("\n전략 합성 v3.1 결과(JSON):")
     print(json.dumps(result, ensure_ascii=False, indent=2))
+    
 strategy_synthesizer_v2 = strategy_synthesizer_v3
