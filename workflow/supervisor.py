@@ -139,10 +139,31 @@ class ParallelSupervisor:
         if not requirements:
             requirements = ["요구사항 추출 실패"]
 
+        # ✅ internal_matches 구조 로그 + 보정
+        internal_matches = internal_data.get("internal_matches", [])
+        print("\n🧩 [DEBUG] internal_matches 전달 전 구조 확인:")
+        if not internal_matches:
+            print("⚠️ internal_matches 비어 있음")
+        else:
+            for i, m in enumerate(internal_matches, 1):
+                print(f"  {i}. {m.get('requirement')} | match_score={m.get('match_score')}")
+
+        # ✅ match_score 누락 방지용 보정
+        for m in internal_matches:
+            val = m.get("match_score")
+            try:
+                if val in [None, "", "N/A"]:
+                    print(f"   ↳ {m.get('requirement')} → match_score 누락 → 0.55 기본값 적용")
+                    m["match_score"] = 0.55
+                else:
+                    m["match_score"] = round(float(val), 2)
+            except Exception:
+                m["match_score"] = 0.55
+
         print("\n🎯 [Strategy Synthesizer v2] 전략 분석 시작...\n")
         strategy_result = await strategy_synthesizer.ainvoke({
             "requirements": requirements,
-            "internal_matches": internal_data.get("internal_matches", []),
+            "internal_matches": internal_matches,
             "competitor_profiles": competitor_data.get("competitor_profiles", {}),
             "temperature": 0.2
         })

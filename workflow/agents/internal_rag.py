@@ -4,7 +4,7 @@ from langchain_core.tools import tool
 from typing import List, Dict, Any
 
 # =========================
-# 경로 초기화 (competitor_analysis와 동일 패턴)
+# 경로 초기화
 # =========================
 try:
     from dotenv import load_dotenv
@@ -15,7 +15,7 @@ try:
 except Exception:
     PROJECT_ROOT = os.getcwd()
 
-# 내부 데이터 경로 (유연하게 설정)
+# 내부 데이터 경로
 DEFAULT_INTERNAL_DIRS = [
     os.getenv("INTERNAL_DATA_DIR"),
     os.path.join(PROJECT_ROOT, "data", "internal"),
@@ -38,22 +38,7 @@ print(f"[내부 데이터] 파일 존재: {os.path.exists(DATA_PATH)}")
 def internal_rag(requirements: List[str]) -> Dict[str, Any]:
     """
     내부 데이터(skax_case_studies.json)를 불러와
-    요구사항별 매칭 결과 (Top-3)를 반환합니다.
-
-    Args:
-        requirements (List[str]): RFP에서 추출된 요구사항 리스트
-
-    Returns:
-        dict: {
-            "internal_matches": [
-                {
-                    "requirement": str,
-                    "matches": [
-                        {"title": str, "summary": str, "url": str}
-                    ]
-                }
-            ]
-        }
+    요구사항별 매칭 결과 및 적합도 점수를 반환합니다.
     """
     print(f"\n[내부 RAG] 시작 - 요구사항 {len(requirements)}개")
     print(f"[내부 RAG] 데이터 경로: {DATA_PATH}")
@@ -75,32 +60,33 @@ def internal_rag(requirements: List[str]) -> Dict[str, Any]:
     matches = []
     for req in requirements:
         related_projects = []
-        
-        # 요구사항에서 키워드 추출 (공백, 쉼표, 괄호 등으로 분리)
+        total_score = 0  # 총합
+        max_possible = 0  # 최대 점수 계산용 (키워드 수 × 3)
+
+        # 키워드 추출
         keywords = []
         for word in req.replace(',', ' ').replace('(', ' ').replace(')', ' ').split():
             word = word.strip()
-            if len(word) >= 2:  # 2글자 이상만
+            if len(word) >= 2:
                 keywords.append(word.lower())
-        
+
         print(f"[내부 RAG] '{req}' → 키워드: {keywords}")
-        
-        # 제목, 내용, summary에서 키워드 매칭
+
+        # 매칭 스코어 계산
         for case in cases:
             title = case.get("title", "").lower()
             content = case.get("content", "").lower()
             summary = case.get("summary", "").lower()
-            
-            # 키워드 중 하나라도 매칭되면 추가
+
             match_score = 0
             for keyword in keywords:
                 if keyword in title:
-                    match_score += 3  # 제목 매칭은 가중치 높게
+                    match_score += 3
                 elif keyword in summary:
-                    match_score += 2  # 요약 매칭
+                    match_score += 2
                 elif keyword in content:
-                    match_score += 1  # 본문 매칭
-            
+                    match_score += 1
+
             if match_score > 0:
                 related_projects.append({
                     "title": case.get("title", "제목 없음"),
@@ -108,38 +94,40 @@ def internal_rag(requirements: List[str]) -> Dict[str, Any]:
                     "url": case.get("url", ""),
                     "score": match_score
                 })
-        
-        # 점수 높은 순으로 정렬 후 Top-3만 선택
+                total_score += match_score
+            max_possible += len(keywords) * 3  # 각 문서별 잠재 점수
+
+        # 점수 정규화
+        if max_possible > 0:
+            normalized_score = min(round(total_score / max_possible, 2), 1.0)
+        else:
+            normalized_score = 0.0
+
+        # 상위 3개만 남기기
         related_projects = sorted(related_projects, key=lambda x: x.get("score", 0), reverse=True)[:3]
-        
-        # score 필드는 제거 (결과에는 불필요)
         for proj in related_projects:
             proj.pop("score", None)
-        
-        print(f"[내부 RAG] '{req}' → {len(related_projects)}개 매칭")
-        if related_projects:
-            for i, proj in enumerate(related_projects, 1):
-                print(f"         {i}. {proj['title'][:50]}...")
+
+        print(f"[내부 RAG] '{req}' → {len(related_projects)}개 매칭, 적합도={normalized_score}")
 
         matches.append({
             "requirement": req,
+            "match_score": normalized_score,  # ✅ 핵심 추가
             "matches": related_projects
         })
 
-    print(f"[내부 RAG] ✅ 완료 - 총 {sum(len(m['matches']) for m in matches)}개 프로젝트 매칭\n")
-    
+    print(f"[내부 RAG] ✅ 완료 - 총 {sum(len(m['matches']) for m in matches)}개 매칭\n")
     return {"internal_matches": matches}
 
 
-# 디버깅용 실행
+# 디버깅용
 if __name__ == "__main__":
     sample_requirements = ["AI 성능 검증", "보안 인증"]
 
-    # @tool 데코레이터 때문에 .invoke()로 실행해야 함
     result = internal_rag.invoke({"requirements": sample_requirements})
 
     print("📋 Internal RAG 결과:")
     for r in result.get("internal_matches", []):
-        print(f"요구사항: {r['requirement']}")
+        print(f"요구사항: {r['requirement']} | 적합도: {r['match_score']}")
         for m in r["matches"]:
-            print(f"   - {m['title']} | {m['summary']} | {m['url']}")
+            print(f"   - {m['title']} | {m['summary'][:60]}...")
