@@ -821,15 +821,106 @@ def render_analysis_detail():
                         internal_data = results['internal_rag']
                         matches = internal_data.get('internal_matches', [])
                         if matches:
+                            # 기술 스택 관련 키워드 (필터링용) - 정확히 일치하는 경우만 필터링
+                            tech_keywords = ['개발 언어 및 환경', '기본 개발 언어', '개발 프레임워크', 
+                                            '데이터 연동', '기술 스택 및 개발 환경']
+                            
+                            # 모든 매칭 결과를 하나의 리스트로 통합
+                            all_projects = []
                             for match in matches:
                                 req = match.get('requirement', '요구사항 미지정')
-                                st.markdown(f"**🔹 {req}**")
+                                
+                                # 기술 스택 관련 요구사항 필터링 (정확히 일치하거나 시작하는 경우만)
+                                is_tech_stack = any(req.strip().startswith(keyword) for keyword in tech_keywords)
+                                if is_tech_stack:
+                                    continue
+                                
                                 related = match.get('matches', [])
-                                if related:
-                                    for proj in related[:3]:
-                                        st.markdown(f"- **{proj.get('title', '제목 없음')}**")
-                                else:
-                                    st.markdown("  ▲ 매칭된 사례 없음")
+                                for proj in related:
+                                    proj_copy = proj.copy()
+                                    proj_copy['matched_requirement'] = req
+                                    # 구분선 제거
+                                    if 'summary' in proj_copy:
+                                        proj_copy['summary'] = proj_copy['summary'].replace('=' * 50, '').replace('=' * 40, '').strip()
+                                    all_projects.append(proj_copy)
+                            
+                            # 상위 3개만 표시
+                            if all_projects:
+                                for i, proj in enumerate(all_projects[:3], 1):
+                                    st.markdown(f"**{i}. {proj.get('title', '제목 없음')}**")
+                                    
+                                    # summary 파싱
+                                    summary = proj.get('summary', '')
+                                    
+                                    # 구분자 찾기
+                                    challenges_markers = ['Challenges:', 'Business Challenges:', '▶ 사업 환경']
+                                    solutions_markers = ['Solutions:', 'Solutions :', '▶ Win 전략']
+                                    benefits_markers = ['Benefits:', 'Benefits :', '▶ 성과']
+                                    
+                                    # 사업배경 추출
+                                    challenges_start = -1
+                                    for marker in challenges_markers:
+                                        pos = summary.find(marker)
+                                        if pos != -1:
+                                            challenges_start = pos
+                                            break
+                                    
+                                    solutions_start = -1
+                                    for marker in solutions_markers:
+                                        pos = summary.find(marker)
+                                        if pos != -1:
+                                            solutions_start = pos
+                                            break
+                                    
+                                    if challenges_start != -1 and solutions_start != -1:
+                                        background = summary[challenges_start:solutions_start]
+                                        for marker in challenges_markers:
+                                            background = background.replace(marker, '')
+                                        background = background.strip()
+                                        # 처음 2-3문장만 추출
+                                        sentences = background.split('.')
+                                        background = '. '.join(sentences[:2]).strip() + '.'
+                                        st.markdown(f"**• 사업배경:** {background}")
+                                    
+                                    # 솔루션 추출
+                                    benefits_start = -1
+                                    for marker in benefits_markers:
+                                        pos = summary.find(marker)
+                                        if pos != -1:
+                                            benefits_start = pos
+                                            break
+                                    
+                                    if solutions_start != -1:
+                                        if benefits_start != -1:
+                                            solution = summary[solutions_start:benefits_start]
+                                        else:
+                                            solution = summary[solutions_start:]
+                                        for marker in solutions_markers:
+                                            solution = solution.replace(marker, '')
+                                        solution = solution.strip()
+                                        # 처음 2-3문장만 추출
+                                        sentences = solution.split('.')
+                                        solution = '. '.join(sentences[:2]).strip() + '.'
+                                        if solution and solution != '.':
+                                            st.markdown(f"**• 솔루션:** {solution}")
+                                    
+                                    # 성과 추출
+                                    if benefits_start != -1:
+                                        benefits = summary[benefits_start:]
+                                        for marker in benefits_markers:
+                                            benefits = benefits.replace(marker, '')
+                                        benefits = benefits.strip()
+                                        # 처음 2-3문장만 추출
+                                        sentences = benefits.split('.')
+                                        benefits = '. '.join(sentences[:2]).strip() + '.'
+                                        if benefits and benefits != '.':
+                                            st.markdown(f"**• 성과 및 효과:** {benefits}")
+                                    
+                                    if proj.get('url'):
+                                        st.markdown(f"[🔗 상세보기]({proj['url']})")
+                                    st.markdown("")
+                            else:
+                                st.info("유의미한 내부 역량 매칭 결과가 없습니다.")
                         else:
                             st.warning("매칭된 내부 역량이 없습니다.")
                     else:
@@ -1047,21 +1138,106 @@ def render_strategy_report():
                 matches = internal_data.get('internal_matches', [])
                 
                 if matches:
+                    # 기술 스택 관련 키워드 (필터링용) - 정확히 일치하는 경우만 필터링
+                    tech_keywords = ['개발 언어 및 환경', '기본 개발 언어', '개발 프레임워크', 
+                                    '데이터 연동', '기술 스택 및 개발 환경']
+                    
+                    # 모든 매칭 결과를 하나의 리스트로 통합
+                    all_projects = []
                     for match in matches:
                         req = match.get('requirement', '요구사항 미지정')
-                        st.markdown(f"**🔹 {req}**")
+                        
+                        # 기술 스택 관련 요구사항 필터링 (정확히 일치하거나 시작하는 경우만)
+                        is_tech_stack = any(req.strip().startswith(keyword) for keyword in tech_keywords)
+                        if is_tech_stack:
+                            continue
                         
                         related = match.get('matches', [])
-                        if related:
-                            for proj in related[:3]:
-                                st.markdown(f"- **{proj.get('title', '제목 없음')}**")
-                                if proj.get('summary'):
-                                    st.markdown(f"  {proj['summary'][:200]}...")
-                                if proj.get('url'):
-                                    st.markdown(f"  [🔗 상세보기]({proj['url']})")
-                        else:
-                            st.markdown("  ⚠️ 매칭된 사례 없음")
-                        st.markdown("---")
+                        for proj in related:
+                            proj_copy = proj.copy()
+                            proj_copy['matched_requirement'] = req
+                            # 구분선 제거
+                            if 'summary' in proj_copy:
+                                proj_copy['summary'] = proj_copy['summary'].replace('=' * 50, '').replace('=' * 40, '').strip()
+                            all_projects.append(proj_copy)
+                    
+                    # 상위 3개만 표시
+                    if all_projects:
+                        for i, proj in enumerate(all_projects[:3], 1):
+                            st.markdown(f"**{i}. {proj.get('title', '제목 없음')}**")
+                            
+                            # summary 파싱
+                            summary = proj.get('summary', '')
+                            
+                            # 구분자 찾기
+                            challenges_markers = ['Challenges:', 'Business Challenges:', '▶ 사업 환경']
+                            solutions_markers = ['Solutions:', 'Solutions :', '▶ Win 전략']
+                            benefits_markers = ['Benefits:', 'Benefits :', '▶ 성과']
+                            
+                            # 사업배경 추출
+                            challenges_start = -1
+                            for marker in challenges_markers:
+                                pos = summary.find(marker)
+                                if pos != -1:
+                                    challenges_start = pos
+                                    break
+                            
+                            solutions_start = -1
+                            for marker in solutions_markers:
+                                pos = summary.find(marker)
+                                if pos != -1:
+                                    solutions_start = pos
+                                    break
+                            
+                            if challenges_start != -1 and solutions_start != -1:
+                                background = summary[challenges_start:solutions_start]
+                                for marker in challenges_markers:
+                                    background = background.replace(marker, '')
+                                background = background.strip()
+                                # 처음 2-3문장만 추출
+                                sentences = background.split('.')
+                                background = '. '.join(sentences[:2]).strip() + '.'
+                                st.markdown(f"**• 사업배경:** {background}")
+                            
+                            # 솔루션 추출
+                            benefits_start = -1
+                            for marker in benefits_markers:
+                                pos = summary.find(marker)
+                                if pos != -1:
+                                    benefits_start = pos
+                                    break
+                            
+                            if solutions_start != -1:
+                                if benefits_start != -1:
+                                    solution = summary[solutions_start:benefits_start]
+                                else:
+                                    solution = summary[solutions_start:]
+                                for marker in solutions_markers:
+                                    solution = solution.replace(marker, '')
+                                solution = solution.strip()
+                                # 처음 2-3문장만 추출
+                                sentences = solution.split('.')
+                                solution = '. '.join(sentences[:2]).strip() + '.'
+                                if solution and solution != '.':
+                                    st.markdown(f"**• 솔루션:** {solution}")
+                            
+                            # 성과 추출
+                            if benefits_start != -1:
+                                benefits = summary[benefits_start:]
+                                for marker in benefits_markers:
+                                    benefits = benefits.replace(marker, '')
+                                benefits = benefits.strip()
+                                # 처음 2-3문장만 추출
+                                sentences = benefits.split('.')
+                                benefits = '. '.join(sentences[:2]).strip() + '.'
+                                if benefits and benefits != '.':
+                                    st.markdown(f"**• 성과 및 효과:** {benefits}")
+                            
+                            if proj.get('url'):
+                                st.markdown(f"[🔗 상세보기]({proj['url']})")
+                            st.markdown("")
+                    else:
+                        st.info("유의미한 내부 역량 매칭 결과가 없습니다.")
                 else:
                     st.warning("매칭된 내부 역량이 없습니다.")
             else:
