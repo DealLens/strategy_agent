@@ -583,9 +583,9 @@ def generate_competitive_strategy(skax_profile: dict, competitors: list) -> list
         print(f"    원본 응답:\n{response[:500]}...")
         return []
     
-    print(f"    ✅ JSON 파싱 성공, 타입: {type(parsed)}")
+    print(f"[경쟁사 분석] JSON 파싱 성공, 타입: {type(parsed)}")
     if isinstance(parsed, list):
-        print(f"    ✅ 파싱된 항목 수: {len(parsed)}")
+        print(f"[경쟁사 분석] 파싱된 항목 수: {len(parsed)}개")
     
     # 유효한 경쟁사 리스트
     valid_companies = {comp.get("company", "") for comp in competitors}
@@ -594,62 +594,50 @@ def generate_competitive_strategy(skax_profile: dict, competitors: list) -> list
     result = []
     
     if isinstance(parsed, list):
-        print(f"    🔍 검증 시작: {len(parsed)}개 항목 검사")
+        print(f"[경쟁사 분석] 검증 시작: {len(parsed)}개 항목")
         for i, item in enumerate(parsed, 1):
-            print(f"      [{i}] 검사 중...")
-            
             if not isinstance(item, dict):
-                print(f"        ❌ dict가 아님: {type(item)}")
+                print(f"  [{i}] 건너뜀 - dict가 아님: {type(item)}")
                 continue
                 
             company = item.get("company", "")
             counter = item.get("counter", "")
             
-            print(f"        company: '{company[:30]}...' ({len(company)}자)")
-            print(f"        counter: '{counter[:50]}...' ({len(counter)}자)")
+            print(f"  [{i}] company: '{company[:30]}...', counter: {len(counter)}자")
             
             # 검증: 키 이름이 값으로 들어간 경우 제거
             if company.lower() in ["company", "counter", "경쟁사", "경쟁사명"]:
-                print(f"        ❌ 무효한 company명: '{company}'")
+                print(f"  [{i}] 건너뜀 - 무효한 company명")
                 continue
             
             # 검증: counter가 너무 짧거나 메타데이터인 경우
-            if len(counter) < 20:  # 최소 20자
-                print(f"        ❌ 전략이 너무 짧음: {len(counter)}자 < 20자")
+            if len(counter) < 50:  # 최소 50자 (상세한 설명 필요)
+                print(f"  [{i}] 건너뜀 - 전략이 너무 짧음: {len(counter)}자 (최소 50자 필요)")
                 continue
             
             # 검증: company가 실제 경쟁사 목록에 있는지
             if valid_companies and company not in valid_companies:
-                print(f"        ⚠️ 알 수 없는 경쟁사: '{company}'")
-                print(f"        유효한 경쟁사: {valid_companies}")
+                print(f"  [{i}] 경고 - 알 수 없는 경쟁사: '{company}'")
                 # 그래도 추가 (오타 가능성)
             
-            print(f"        ✅ 통과!")
+            print(f"  [{i}] ✓ 추가: {company}")
             result.append({"company": company, "counter": counter})
     
     elif isinstance(parsed, dict):
-        print(f"    🔍 dict 형식 감지, 변환 시작...")
         # dict를 list로 변환
         for company, strategies in parsed.items():
-            print(f"      키: '{company}'")
-            
             # 키가 메타데이터인 경우 스킵
             if company.lower() in ["company", "counter", "경쟁사"]:
-                print(f"        ❌ 메타데이터 키 스킵")
                 continue
                 
             if isinstance(strategies, list):
-                print(f"        strategies는 list: {len(strategies)}개")
                 for strategy in strategies:
-                    if isinstance(strategy, str) and len(strategy) >= 20:
+                    if isinstance(strategy, str) and len(strategy) >= 50:
                         result.append({"company": company, "counter": strategy})
-                        print(f"          ✅ 추가: {strategy[:50]}...")
             else:
                 strategy_text = str(strategies)
-                print(f"        strategies는 {type(strategies)}: {len(strategy_text)}자")
-                if len(strategy_text) >= 20:
+                if len(strategy_text) >= 50:
                     result.append({"company": company, "counter": strategy_text})
-                    print(f"          ✅ 추가: {strategy_text[:50]}...")
     
     else:
         print(f"    ❌ 예상치 못한 응답 형식: {type(parsed)}")
@@ -660,7 +648,7 @@ def generate_competitive_strategy(skax_profile: dict, competitors: list) -> list
         company = item.get("company", "")
         company_counts[company] = company_counts.get(company, 0) + 1
     
-    print(f"  ✅ 생성된 전략: {len(result)}개")
+    print(f"[경쟁사 분석] 생성된 전략: {len(result)}개")
     for company, count in company_counts.items():
         emoji = "✅" if count >= 2 else "⚠️"
         print(f"    {emoji} {company}: {count}개")

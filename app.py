@@ -8,10 +8,12 @@ import asyncio
 import re
 from datetime import datetime
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib import colors
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from io import BytesIO
 
 # Supervisor import
@@ -25,7 +27,7 @@ st.set_page_config(
     page_title="DealLens 전략분석 에이전트",
     layout="wide",
     initial_sidebar_state="expanded",
-    page_icon="🚀"
+    page_icon="▸"
 )
 
 # =============================================================================
@@ -40,43 +42,90 @@ def get_base64_image(image_path):
     except:
         return None
 
-def generate_analysis_pdf():
-    """분석 결과 PDF 생성"""
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
-    styles = getSampleStyleSheet()
+def register_korean_font():
+    """한글 폰트 등록"""
+    try:
+        # Windows 맑은 고딕 폰트 경로
+        font_path = "C:/Windows/Fonts/malgun.ttf"
+        if os.path.exists(font_path):
+            pdfmetrics.registerFont(TTFont('MalgunGothic', font_path))
+            return 'MalgunGothic'
+    except:
+        pass
     
-    # 커스텀 스타일 정의
+    try:
+        # 대체: 굴림 폰트
+        font_path = "C:/Windows/Fonts/gulim.ttc"
+        if os.path.exists(font_path):
+            pdfmetrics.registerFont(TTFont('Gulim', font_path))
+            return 'Gulim'
+    except:
+        pass
+    
+    return 'Helvetica'  # 폴백
+
+def generate_analysis_pdf():
+    """분석 결과 PDF 생성 (한글 지원)"""
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=50, rightMargin=50, topMargin=50, bottomMargin=50)
+    
+    # 한글 폰트 등록
+    korean_font = register_korean_font()
+    
+    # 커스텀 스타일 정의 (한글 폰트 적용)
     title_style = ParagraphStyle(
         'CustomTitle',
-        parent=styles['Heading1'],
-        fontSize=18,
+        fontName=korean_font,
+        fontSize=20,
         spaceAfter=30,
         alignment=1,  # 중앙 정렬
-        textColor=colors.darkblue
+        textColor=colors.HexColor('#1e3a8a'),
+        leading=24
     )
     
-    heading_style = ParagraphStyle(
-        'CustomHeading',
-        parent=styles['Heading2'],
-        fontSize=14,
+    heading1_style = ParagraphStyle(
+        'CustomHeading1',
+        fontName=korean_font,
+        fontSize=16,
         spaceAfter=12,
-        textColor=colors.darkblue
+        spaceBefore=12,
+        textColor=colors.HexColor('#1e3a8a'),
+        leading=20
+    )
+    
+    heading2_style = ParagraphStyle(
+        'CustomHeading2',
+        fontName=korean_font,
+        fontSize=14,
+        spaceAfter=10,
+        spaceBefore=10,
+        textColor=colors.HexColor('#2563eb'),
+        leading=18
     )
     
     normal_style = ParagraphStyle(
         'CustomNormal',
-        parent=styles['Normal'],
+        fontName=korean_font,
         fontSize=10,
-        spaceAfter=6
+        spaceAfter=6,
+        leading=14
+    )
+    
+    bullet_style = ParagraphStyle(
+        'CustomBullet',
+        fontName=korean_font,
+        fontSize=9,
+        spaceAfter=4,
+        leftIndent=20,
+        leading=13
     )
     
     # PDF 내용 구성
     story = []
     
     # 제목
-    story.append(Paragraph("DealLens 전략 분석 보고서", title_style))
-    story.append(Spacer(1, 20))
+    story.append(Paragraph("△ 전략 분석 보고서", title_style))
+    story.append(Spacer(1, 10))
     
     # 분석 정보
     if st.session_state.get('previous_file'):
@@ -84,34 +133,134 @@ def generate_analysis_pdf():
     story.append(Paragraph(f"<b>분석 시간:</b> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", normal_style))
     story.append(Spacer(1, 20))
     
-    # 1. RFP 분석 결과
-    story.append(Paragraph("① RFP 분석 결과", heading_style))
-    story.append(Paragraph("🤖 Agent와 연결하면 RFP 문서 분석 결과가 표시됩니다.", normal_style))
-    story.append(Spacer(1, 15))
+    # 실제 분석 결과 가져오기
+    results = st.session_state.get('analysis_results')
     
-    # 2. 내부 역량 매칭 결과
-    story.append(Paragraph("② 내부 역량 매칭 결과", heading_style))
-    story.append(Paragraph("🤖 Agent와 연결하면 내부 역량 매칭 결과가 표시됩니다.", normal_style))
-    story.append(Spacer(1, 15))
+    if results and not results.get('error'):
+        # === [1] 전략 요약 ===
+        strategy_result = results.get('strategy_synthesizer', {})
+        strategy_data = strategy_result.get('strategy', {})
+        
+        if strategy_data:
+            story.append(Paragraph("[1] 전략 요약", heading1_style))
+            
+            # 전략 요약
+            summary = strategy_data.get('summary', '')
+            if summary:
+                story.append(Paragraph(summary[:500], normal_style))
+                story.append(Spacer(1, 10))
+            
+            # Focus 영역
+            focus = strategy_data.get('focus', {})
+            if focus:
+                story.append(Paragraph("○ 핵심 방향성", heading2_style))
+                for key, value in focus.items():
+                    if value:
+                        story.append(Paragraph(f"• {key}: {value[:200]}", bullet_style))
+                story.append(Spacer(1, 10))
+        
+        # === [2] 핵심 액션 플랜 ===
+        actions = strategy_data.get('prioritized_actions', [])
+        if actions:
+            story.append(PageBreak())
+            story.append(Paragraph("[2] 핵심 액션 플랜", heading1_style))
+            
+            for i, action in enumerate(actions[:8], 1):  # 상위 8개만
+                if isinstance(action, dict):
+                    action_title = action.get('action', f'액션 {i}')
+                    story.append(Paragraph(f"[A{i}] {action_title}", heading2_style))
+                    
+                    why = action.get('why', '')
+                    if why:
+                        story.append(Paragraph(f"▷ 이유: {why[:300]}", bullet_style))
+                    
+                    how = action.get('how', '')
+                    if how:
+                        story.append(Paragraph(f"◇ 방법: {how[:300]}", bullet_style))
+                    
+                    story.append(Spacer(1, 8))
+        
+        # === [3] 경쟁사 대응 전략 ===
+        appendix = strategy_data.get('appendix', {})
+        competitor_counters = appendix.get('competitor_counters', [])
+        
+        if competitor_counters:
+            story.append(PageBreak())
+            story.append(Paragraph("[3] 경쟁사 대응 전략", heading1_style))
+            
+            # 경쟁사별로 그룹화
+            companies = {}
+            for counter in competitor_counters:
+                company = counter.get('company', '경쟁사')
+                if company not in companies:
+                    companies[company] = []
+                companies[company].append(counter.get('counter', 'N/A'))
+            
+            for company, counters in companies.items():
+                story.append(Paragraph(f"■ {company}", heading2_style))
+                for j, counter_text in enumerate(counters[:3], 1):  # 상위 3개만
+                    story.append(Paragraph(f"{j}. {counter_text[:400]}", bullet_style))
+                story.append(Spacer(1, 8))
+        
+        # === [4] 리스크 ===
+        risks = strategy_data.get('risks', [])
+        if risks:
+            story.append(PageBreak())
+            story.append(Paragraph("[4] 주요 리스크", heading1_style))
+            
+            for i, risk in enumerate(risks[:5], 1):  # 상위 5개만
+                if isinstance(risk, dict):
+                    risk_text = risk.get('risk', '리스크 항목')
+                    story.append(Paragraph(f"▲ {risk_text[:300]}", bullet_style))
+                    
+                    mitigation = risk.get('mitigation', '')
+                    if mitigation:
+                        story.append(Paragraph(f"   → 대응: {mitigation[:300]}", bullet_style))
+                    story.append(Spacer(1, 6))
+        
+        # === [5] KPI ===
+        kpis = strategy_data.get('kpis', [])
+        if kpis:
+            story.append(PageBreak())
+            story.append(Paragraph("[5] 핵심 KPI", heading1_style))
+            
+            for i, kpi in enumerate(kpis[:8], 1):  # 상위 8개만
+                if isinstance(kpi, dict):
+                    kpi_name = kpi.get('name', 'KPI')
+                    baseline = kpi.get('baseline', 'N/A')
+                    target = kpi.get('target', 'N/A')
+                    story.append(Paragraph(f"• {kpi_name}: {baseline} → {target}", bullet_style))
+                    story.append(Spacer(1, 4))
     
-    # 3. 경쟁사 분석 결과
-    story.append(Paragraph("③ 경쟁사 분석 결과", heading_style))
-    story.append(Paragraph("🤖 Agent와 연결하면 경쟁사 분석 결과가 표시됩니다.", normal_style))
-    story.append(Spacer(1, 15))
+    else:
+        story.append(Paragraph("※ 분석 결과가 없거나 오류가 발생했습니다.", normal_style))
     
-    # 4. 전략 도출 결과
-    story.append(Paragraph("④ 전략 도출 결과", heading_style))
-    story.append(Paragraph("🤖 Agent와 연결하면 전략 도출 결과가 표시됩니다.", normal_style))
-    story.append(Spacer(1, 20))
+    story.append(Spacer(1, 30))
     
     # 푸터
-    story.append(Paragraph("본 보고서는 DealLens 전략분석 멀티에이전트에 의해 생성되었습니다.", 
-                          ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, alignment=1)))
+    footer_style = ParagraphStyle(
+        'Footer',
+        fontName=korean_font,
+        fontSize=8,
+        alignment=1,
+        textColor=colors.grey
+    )
+    story.append(Paragraph("본 보고서는 DealLens 전략분석 AI 에이전트에 의해 생성되었습니다.", footer_style))
     
     # PDF 생성
-    doc.build(story)
-    buffer.seek(0)
-    return buffer.getvalue()
+    try:
+        doc.build(story)
+        buffer.seek(0)
+        return buffer.getvalue()
+    except Exception as e:
+        print(f"PDF 생성 오류: {e}")
+        # 오류 시 기본 PDF 반환
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4)
+        error_story = [Paragraph(f"PDF 생성 중 오류 발생: {str(e)}", normal_style)]
+        doc.build(error_story)
+        buffer.seek(0)
+        return buffer.getvalue()
 
 def initialize_session_state():
     """세션 상태 초기화"""
@@ -532,7 +681,7 @@ def render_main_header():
     </div>
     <div class="header-right">
         <div class="nav-buttons">
-                    <button class="nav-btn" id="header-history-btn">📋 분석 History</button>
+                    <button class="nav-btn" id="header-history-btn">■ 분석 History</button>
         </div>
 </div>
     </div>
@@ -553,7 +702,7 @@ def render_main_header():
             </div>
             <div class="header-right">
                 <div class="nav-buttons">
-                    <button class="nav-btn" id="header-history-btn">📋 분석 History</button>
+                    <button class="nav-btn" id="header-history-btn">■ 분석 History</button>
                 </div>
             </div>
         </div>
@@ -596,21 +745,21 @@ def render_analysis_history():
     """분석 히스토리 사이드바 렌더링"""
     if st.session_state.show_history:
         with st.sidebar:
-            st.markdown("### 📋 분석 History")
+            st.markdown("### ■ 분석 History")
             st.markdown("---")
 
             if st.session_state.analysis_history:
                 for i, record in enumerate(reversed(st.session_state.analysis_history)):
-                    with st.expander(f"📄 {record['filename']}", expanded=False):
+                    with st.expander(f"■ {record['filename']}", expanded=False):
                         st.write(f"**업로드 시간:** {record['upload_time']}")
                         
-                        if st.button(f"📊 분석 결과 보기", key=f"view_result_{i}"):
+                        if st.button(f"▶ 분석 결과 보기", key=f"view_result_{i}"):
                             st.session_state.selected_analysis = i
                             st.session_state.show_analysis_detail = True
 
                         if record.get('file_content'):
                             st.download_button(
-                                label="📥 PDF 다운로드",
+                                label="■ 원본 RFP 다운로드",
                                 data=record['file_content'],
                                 file_name=record['filename'],
                                 mime="application/pdf",
@@ -641,12 +790,12 @@ def render_analysis_detail():
                 record = st.session_state.analysis_history[selected_idx]
 
                 st.markdown("---")
-                st.markdown(f"### 📊 분석 결과: {record['filename']}")
+                st.markdown(f"### ▶ 분석 결과: {record['filename']}")
                 st.markdown(f"**분석 시간:** {record['upload_time']}")
                 
                 # 전략 보고서 표시
                 st.markdown("---")
-                st.markdown("## 📊 전략 분석 결과")
+                st.markdown("## ▶ 전략 분석 결과")
                 
                 # 저장된 분석 결과 가져오기
                 results = record.get('analysis_results')
@@ -656,11 +805,11 @@ def render_analysis_detail():
                     if results and 'rfp_parser' in results:
                         rfp_data = results['rfp_parser']
                         if 'requirements' in rfp_data:
-                            st.markdown("**📋 핵심 요구사항:**")
+                            st.markdown("**■ 핵심 요구사항:**")
                             for req in rfp_data['requirements'][:10]:
                                 st.markdown(f"- {req}")
                         if 'evaluation' in rfp_data:
-                            st.markdown("\n**⚖️ 평가 기준:**")
+                            st.markdown("\n**▣ 평가 기준:**")
                             for eval_item in rfp_data['evaluation'][:10]:
                                 st.markdown(f"- {eval_item}")
                     else:
@@ -680,7 +829,7 @@ def render_analysis_detail():
                                     for proj in related[:3]:
                                         st.markdown(f"- **{proj.get('title', '제목 없음')}**")
                                 else:
-                                    st.markdown("  ⚠️ 매칭된 사례 없음")
+                                    st.markdown("  ▲ 매칭된 사례 없음")
                         else:
                             st.warning("매칭된 내부 역량이 없습니다.")
                     else:
@@ -716,17 +865,17 @@ def render_analysis_detail():
                         strategy_data = strategy_result.get('strategy', {})
                         
                         if strategy_data.get('summary'):
-                            st.markdown("### 💡 전략 요약")
+                            st.markdown("### ○ 전략 요약")
                             st.info(strategy_data['summary'])
                             st.markdown("---")
                         
                         if strategy_data.get('actions'):
-                            st.markdown("**🎯 액션 플랜:**")
+                            st.markdown("**• 액션 플랜:**")
                             for action in strategy_data['actions']:
                                 st.markdown(f"- {action}")
                         
                         if strategy_data.get('differentiation'):
-                            st.markdown("\n**✨ 차별화 포인트:**")
+                            st.markdown("\n**○ 차별화 포인트:**")
                             for diff in strategy_data['differentiation']:
                                 # "차별화포인트 X:", "차별화 포인트 X:" 같은 접두어 제거
                                 cleaned_diff = re.sub(r'^차별화\s*포인트\s*\d+\s*[:：]\s*', '', str(diff), flags=re.IGNORECASE)
@@ -751,13 +900,13 @@ def render_file_upload():
     st.markdown("""
     <div style="text-align: left; margin: 0.5rem 0 0.5rem 0;">
         <h3 style="font-size: 1.5rem; font-weight: 600; color: #333; margin-bottom: 0.5rem;">
-            📄 RFP 파일을 업로드해주세요
+            ■ RFP 파일을 업로드해주세요
         </h3>
     </div>
     """, unsafe_allow_html=True)
 
     uploaded_file = st.file_uploader(
-        "",
+        "RFP 파일 업로드",
         type=["pdf"],
         help="RFP 문서를 PDF 형태로 업로드해주세요. 최대 200MB까지 지원됩니다.",
         label_visibility="collapsed"
@@ -776,7 +925,7 @@ def render_analysis_button(uploaded_file):
     col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
     with col_btn2:
         run_button = st.button(
-            "📊 분석 시작",
+            "▶ 분석 시작",
             use_container_width=True,
             type="primary",
             disabled=uploaded_file is None,
@@ -789,7 +938,7 @@ def render_analysis_button(uploaded_file):
             st.session_state.analysis_running = True
             
             # 분석 진행 중 표시
-            with st.spinner("🔄 AI 에이전트가 분석을 진행 중입니다..."):
+            with st.spinner(" AI 에이전트가 분석을 진행 중입니다... \n더 자세한 분석을 위해 최소 1분에서 최대 5분까지 소요될 수 있습니다. "):
                 # 실제 분석 실행
                 results = run_analysis(uploaded_file)
                 st.session_state.analysis_results = results
@@ -850,11 +999,11 @@ def render_strategy_report():
             st.markdown("---")
             
             # 사이드바 버튼들
-            if st.button("📋 분석 History", use_container_width=True):
+            if st.button("■ 분석 History", use_container_width=True):
                 st.session_state.show_history = not st.session_state.show_history
                 st.rerun()
             
-            if st.button("🔄 새로운 분석", use_container_width=True):
+            if st.button("◎ 새로운 분석", use_container_width=True):
                 save_analysis_to_history()
                 reset_analysis_state()
                 st.rerun()
@@ -866,8 +1015,8 @@ def render_strategy_report():
         results = st.session_state.get('analysis_results')
         
         if results and 'error' in results:
-            st.error(f"❌ {results['error']}")
-            st.info("💡 .env 파일에 API 키가 올바르게 설정되어 있는지 확인해주세요.")
+            st.error(f"✗ {results['error']}")
+            st.info("※ .env 파일에 API 키가 올바르게 설정되어 있는지 확인해주세요.")
         
         # 1. RFP 분석 결과
         with st.expander("① RFP 분석 결과", expanded=True):
@@ -885,11 +1034,11 @@ def render_strategy_report():
                         st.markdown(f"- {eval_item}")
                 
                 if 'risks' in rfp_data:
-                    st.markdown("\n**⚠️ 리스크 요소:**")
+                    st.markdown("\n**▲ 리스크 요소:**")
                     for risk in rfp_data['risks'][:10]:
                         st.markdown(f"- {risk}")
             else:
-                st.info("🤖 분석을 시작하면 RFP 문서 분석 결과가 표시됩니다.")
+                st.info("※ 분석을 시작하면 RFP 문서 분석 결과가 표시됩니다.")
         
         # 2. 내부 역량 매칭 결과
         with st.expander("② 내부 역량 매칭 결과", expanded=False):
@@ -916,7 +1065,7 @@ def render_strategy_report():
                 else:
                     st.warning("매칭된 내부 역량이 없습니다.")
             else:
-                st.info("🤖 분석을 시작하면 내부 역량 매칭 결과가 표시됩니다.")
+                st.info("※ 분석을 시작하면 내부 역량 매칭 결과가 표시됩니다.")
         
         # 3. 경쟁사 분석 결과
         with st.expander("③ 경쟁사 분석 결과", expanded=False):
@@ -936,17 +1085,17 @@ def render_strategy_report():
                     if swot:
                         col1, col2 = st.columns(2)
                         with col1:
-                            st.markdown("**💪 강점 (S):**")
+                            st.markdown("**▶ 강점 (S):**")
                             for s in swot.get('S', []):
                                 st.markdown(f"- {s}")
-                            st.markdown("**🌟 기회 (O):**")
+                            st.markdown("**☆ 기회 (O):**")
                             for o in swot.get('O', []):
                                 st.markdown(f"- {o}")
                         with col2:
-                            st.markdown("**⚠️ 약점 (W):**")
+                            st.markdown("**▲ 약점 (W):**")
                             for w in swot.get('W', []):
                                 st.markdown(f"- {w}")
-                            st.markdown("**⚡ 위협 (T):**")
+                            st.markdown("**▲ 위협 (T):**")
                             for t in swot.get('T', []):
                                 st.markdown(f"- {t}")
                     
@@ -959,13 +1108,13 @@ def render_strategy_report():
                     
                     st.markdown("---")
             else:
-                st.info("🤖 분석을 시작하면 경쟁사 분석 결과가 표시됩니다.")
+                st.info("※ 분석을 시작하면 경쟁사 분석 결과가 표시됩니다.")
         
         # 전략분석보고서 읽기 버튼
         st.markdown("---")
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            if st.button("📊 전략분석보고서 읽기", use_container_width=True, type="primary"):
+            if st.button("▶ 전략분석보고서 읽기", use_container_width=True, type="primary"):
                 st.session_state.show_strategy_detail = True
                 st.rerun()
         
@@ -978,7 +1127,7 @@ def render_strategy_report():
                 filename = f"DealLens_분석보고서_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
                 
                 st.download_button(
-                    label="📄 분석 결과 PDF 다운로드",
+                    label="■ 분석 결과 PDF 다운로드",
                     data=pdf_data,
                     file_name=filename,
                     mime="application/pdf",
@@ -1029,21 +1178,40 @@ def render_strategy_detail_page():
         st.markdown("---")
         
         # 사이드바 버튼들
-        if st.button("🔙 분석 결과로 돌아가기", use_container_width=True):
+        if st.button("◀ 분석 결과로 돌아가기", use_container_width=True):
             st.session_state.show_strategy_detail = False
             st.rerun()
         
-        if st.button("📋 분석 History", use_container_width=True):
+        # PDF 다운로드 버튼 추가
+        st.markdown("---")
+        try:
+            pdf_data = generate_analysis_pdf()
+            filename = f"전략분석보고서_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+            
+            st.download_button(
+                label="■ PDF 다운로드",
+                data=pdf_data,
+                file_name=filename,
+                mime="application/pdf",
+                use_container_width=True,
+                type="primary"
+            )
+        except Exception as e:
+            st.error(f"PDF 생성 중 오류: {e}")
+        
+        st.markdown("---")
+        
+        if st.button("■ 분석 History", use_container_width=True):
             st.session_state.show_history = not st.session_state.show_history
             st.rerun()
         
-        if st.button("🔄 새로운 분석", use_container_width=True):
+        if st.button("◎ 새로운 분석", use_container_width=True):
             save_analysis_to_history()
             reset_analysis_state()
             st.rerun()
     
     # 전략 도출 결과 표시
-    st.markdown("# 📈 전략 분석 보고서 (v3.1)")
+    st.markdown("# △ 전략 분석 보고서 (v3.1)")
     st.markdown("---")
     
     # 분석 결과 가져오기
@@ -1065,15 +1233,15 @@ def render_strategy_detail_page():
         strategy_data = strategy_result.get('strategy', {})
         appendix = strategy_data.get('appendix', {})
         
-        # 🎯 임원 요약 (Executive Summary)
+        # ● 임원 요약 (Executive Summary)
         executive_summary = appendix.get('executive_summary', {})
         if executive_summary:
-            st.markdown("## 🎯 임원 요약 (Executive Summary)")
+            st.markdown("## ● 임원 요약 (Executive Summary)")
             
             # 핵심 메시지 3가지
             key_messages = executive_summary.get('핵심 메시지 3가지', [])
             if key_messages:
-                st.markdown("### 💡 핵심 메시지 (Top 3)")
+                st.markdown("### ○ 핵심 메시지 (Top 3)")
                 for msg in key_messages:
                     st.success(msg)
             
@@ -1089,15 +1257,15 @@ def render_strategy_detail_page():
                 # 위험 요소 TOP 3
                 top_risks = executive_summary.get('위험 요소 TOP 3', '')
                 if top_risks:
-                    st.markdown("### ⚠️ 주요 위험 요소")
+                    st.markdown("### ▲ 주요 위험 요소")
                     st.warning(top_risks)
             
             st.markdown("---")
         
-        # 📊 경쟁사 비교 요약 테이블
+        # ▶ 경쟁사 비교 요약 테이블
         comparison_table = appendix.get('competitor_comparison_table', [])
         if comparison_table:
-            st.markdown("## 📊 경쟁사 비교 요약")
+            st.markdown("## ▶ 경쟁사 비교 요약")
             
             for row in comparison_table:
                 category = row.get('category', '')
@@ -1140,10 +1308,10 @@ def render_strategy_detail_page():
             
             st.markdown("---")
         
-        # 1️⃣ 전략 요약 (핵심 방향성)
-        st.markdown("## 1️⃣ 전략 요약 (핵심 방향성)")
+        # [1] 전략 요약 (핵심 방향성)
+        st.markdown("## [1] 전략 요약 (핵심 방향성)")
         if strategy_data.get('summary'):
-            with st.expander("📋 전체 전략 요약 보기", expanded=False):
+            with st.expander("■ 전체 전략 요약 보기", expanded=False):
                 st.info(strategy_data['summary'])
         
         # Focus 영역 표시
@@ -1151,18 +1319,18 @@ def render_strategy_detail_page():
         if focus:
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.markdown("**🔧 내부 역량 관점**")
+                st.markdown("**◇ 내부 역량 관점**")
                 st.markdown(focus.get('internal', 'N/A'))
             with col2:
-                st.markdown("**🥊 경쟁사 대응 관점**")
+                st.markdown("**▶ 경쟁사 대응 관점**")
                 st.markdown(focus.get('competitor', 'N/A'))
             with col3:
-                st.markdown("**📊 시장/정책 관점**")
+                st.markdown("**▶ 시장/정책 관점**")
                 st.markdown(focus.get('market', 'N/A'))
         st.markdown("---")
                 
-        # 2️⃣ 요구사항 대비 내부 적합도 분석 (그룹화)
-        st.markdown("## 2️⃣ 요구사항 대비 내부 적합도 분석")
+        # [2] 요구사항 대비 내부 적합도 분석 (그룹화)
+        st.markdown("## [2] 요구사항 대비 내부 적합도 분석")
         appendix = strategy_data.get('appendix', {})
         fit_table = appendix.get('fit_table', [])
         
@@ -1205,29 +1373,29 @@ def render_strategy_detail_page():
                 
                 # 관련 요구사항 리스트
                 requirements = [item.get('requirement', '') for item in items]
-                st.markdown(f"**📋 관련 요구사항 ({len(items)}건):**")
+                st.markdown(f"**■ 관련 요구사항 ({len(items)}건):**")
                 for req in requirements:
                     st.markdown(f"  • {req}")
                 
-                st.markdown(f"**📊 적합도 수준:** {fit_level.replace('_', ' ').title()}")
+                st.markdown(f"**▶ 적합도 수준:** {fit_level.replace('_', ' ').title()}")
                 
                 # 적합도 차이 원인 분석 (공통)
                 if gap_cause:
-                    st.markdown(f"**🔍 보완 필요 원인:** {gap_cause}")
+                    st.markdown(f"**▷ 보완 필요 원인:** {gap_cause}")
                 
                 # 정량적 영향 (공통)
                 quantitative_impact = first_item.get('quantitative_impact', '')
                 if quantitative_impact:
-                    st.markdown(f"**📈 정량적 영향:** {quantitative_impact}")
+                    st.markdown(f"**△ 정량적 영향:** {quantitative_impact}")
                 
                 # 정성적 영향 (공통)
                 qualitative_impact = first_item.get('qualitative_impact', '')
                 if qualitative_impact:
-                    st.markdown(f"**💭 정성적 영향:** {qualitative_impact}")
+                    st.markdown(f"**○ 정성적 영향:** {qualitative_impact}")
                 
                 # 보완 액션 (공통)
                 suggested_action = first_item.get('suggested_action', 'N/A')
-                st.markdown(f"**🔧 통합 솔루션:** {suggested_action}")
+                st.markdown(f"**◇ 통합 솔루션:** {suggested_action}")
                 
                 st.markdown("---")
                 group_idx += 1
@@ -1235,12 +1403,12 @@ def render_strategy_detail_page():
             st.info("적합도 분석 데이터가 없습니다.")
         st.markdown("---")
         
-        # 3️⃣ 경쟁사 대응 전략
-        st.markdown("## 3️⃣ 경쟁사 대응 전략")
+        # [3] 경쟁사 대응 전략
+        st.markdown("## [3] 경쟁사 대응 전략")
         competitor_counters = appendix.get('competitor_counters', [])
         
         if competitor_counters:
-            # 경쟁사별로 그룹화 (2️⃣ 개선 - 기술 특성 기반)
+            # 경쟁사별로 그룹화 ([2] 개선 - 기술 특성 기반)
             companies = {}
             for counter in competitor_counters:
                 company = counter.get('company', '경쟁사')
@@ -1249,17 +1417,17 @@ def render_strategy_detail_page():
                 companies[company].append(counter.get('counter', 'N/A'))
             
             for company, counters in companies.items():
-                st.markdown(f"### 🏢 {company}")
+                st.markdown(f"### ■ {company}")
                 for j, counter_text in enumerate(counters, 1):
                     # counter_text가 이미 이모지/헤더를 포함하고 있는지 확인
-                    has_prefix = counter_text.strip().startswith(('💪', '⚠️', '🔥', '✨'))
+                    has_prefix = counter_text.strip().startswith(('▶', '▲', '△', '○'))
                     
                     if not has_prefix:
                         # 헤더가 없으면 강점/약점 분리 표시
                         if '강점' in counter_text:
-                            st.markdown(f"**💪 강점 대응 {j}:**")
+                            st.markdown(f"**▶ 강점 대응 {j}:**")
                         elif '약점' in counter_text:
-                            st.markdown(f"**⚠️ 약점 활용 {j}:**")
+                            st.markdown(f"**▲ 약점 활용 {j}:**")
                         else:
                             st.markdown(f"**{j}.**")
                     
@@ -1280,8 +1448,8 @@ def render_strategy_detail_page():
             st.info("경쟁사 대응 전략 데이터가 없습니다.")
         st.markdown("---")
         
-        # 4️⃣ 핵심 액션 플랜
-        st.markdown("## 4️⃣ 핵심 액션 플랜")
+        # [4] 핵심 액션 플랜
+        st.markdown("## [4] 핵심 액션 플랜")
         actions = strategy_data.get('prioritized_actions', [])
         
         if actions:
@@ -1292,45 +1460,43 @@ def render_strategy_detail_page():
                     urgency = action.get('urgency', 'medium').upper()
                     effort = action.get('effort', 'medium').upper()
                     
-                    priority_badge = "🔥" if impact == "HIGH" and urgency == "HIGH" else "⚡" if urgency == "HIGH" else "📌"
+                    priority_badge = "▲" if impact == "HIGH" and urgency == "HIGH" else "▸" if urgency == "HIGH" else "◆"
                     action_id = action.get('id', f'A{i}')
                     
                     st.markdown(f"### {priority_badge} [{action_id}] {action.get('action', '액션 항목')}")
                     
                     col1, col2 = st.columns([2, 1])
                     with col1:
-                        st.markdown(f"**📝 이유(Why):** {action.get('why', 'N/A')}")
+                        st.markdown(f"**▷ 이유(Why):** {action.get('why', 'N/A')}")
                         
                         # 방법(How)
                         how = action.get('how', '')
                         if how:
-                            st.markdown(f"**🔧 방법(How):** {how}")
+                            st.markdown(f"**◇ 방법(How):** {how}")
                         
                         # 전략 접근법
                         strategy_approach = action.get('strategy_approach', '')
                         if strategy_approach:
                             approach_emoji = {
-                                'Defensive': '🛡️',
-                                'Offensive': '⚔️',
-                                'Differentiation': '✨',
-                                'Partnership': '🤝',
-                                'Innovative': '💡'
-                            }.get(strategy_approach, '📋')
+                                'Defensive': '◈',
+                                'Offensive': '▶',
+                                'Differentiation': '○',
+                                'Partnership': '◎',
+                                'Innovative': '○'
+                            }.get(strategy_approach, '■')
                             st.markdown(f"**{approach_emoji} 전략 접근:** {strategy_approach}")
                         
-                        st.markdown(f"**👤 담당:** {action.get('owner', 'N/A')}")
+                        st.markdown(f"**◇ 담당:** {action.get('owner', 'N/A')}")
                         
                         # 기대 결과 (수치화)
                         expected_result = action.get('expected_result', '')
                         if expected_result:
-                            st.markdown(f"**📊 기대 결과:** {expected_result}")
+                            st.markdown(f"**▶ 기대 결과:** {expected_result}")
                     
                     with col2:
                         st.markdown(f"**Impact:** `{impact}`")
                         st.markdown(f"**Urgency:** `{urgency}`")
                         st.markdown(f"**Effort:** `{effort}`")
-                        timeline = action.get('expected_timeline', 'N/A')
-                        st.markdown(f"**⏱️ 예상 일정:** {timeline}")
                     
                     st.markdown("")
                 else:
@@ -1339,19 +1505,19 @@ def render_strategy_detail_page():
             st.info("액션 플랜 데이터가 없습니다.")
         st.markdown("---")
         
-        # 5️⃣ 당사 SWOT
-        st.markdown("## 5️⃣ 당사 SWOT 분석")
+        # [5] 당사 SWOT
+        st.markdown("## [5] 당사 SWOT 분석")
         # focus를 활용하여 SWOT 형태로 재구성
         if focus:
             col1, col2 = st.columns(2)
             with col1:
-                st.markdown("### 💪 강점 (Strengths)")
+                st.markdown("### ▶ 강점 (Strengths)")
                 st.markdown(focus.get('internal', 'N/A'))
                 st.markdown("")
-                st.markdown("### 🌟 기회 (Opportunities)")
+                st.markdown("### ☆ 기회 (Opportunities)")
                 st.markdown(focus.get('market', 'N/A'))
             with col2:
-                st.markdown("### ⚠️ 약점 (Weaknesses)")
+                st.markdown("### ▲ 약점 (Weaknesses)")
                 # fit_table에서 LOW_FIT/PARTIAL_FIT 추출
                 low_fits = [f.get('requirement', '') for f in fit_table if f.get('fit_level', '').upper() in ['LOW_FIT', 'PARTIAL_FIT']]
                 if low_fits:
@@ -1360,14 +1526,14 @@ def render_strategy_detail_page():
                     st.markdown("식별된 주요 보완 영역 없음")
                 
                 st.markdown("")
-                st.markdown("### ⚡ 위협 (Threats)")
+                st.markdown("### ▲ 위협 (Threats)")
                 st.markdown(focus.get('competitor', 'N/A'))
         else:
             st.info("SWOT 분석 데이터가 없습니다.")
         st.markdown("---")
         
-        # 6️⃣ 3단계 실행 로드맵 (전략 수준)
-        st.markdown("## 6️⃣ 3단계 실행 로드맵")
+        # [6] 3단계 실행 로드맵 (전략 수준)
+        st.markdown("## [6] 3단계 실행 로드맵")
         roadmap = strategy_data.get('roadmap', {})
         
         if roadmap:
@@ -1375,69 +1541,69 @@ def render_strategy_detail_page():
             
             # Phase 0: Pre-Bid
             with col1:
-                st.markdown("### 📋 Phase 0: Pre-Bid")
+                st.markdown("### ■ Phase 0: Pre-Bid")
                 prebid = roadmap.get('phase_0_prebid', {})
                 if prebid and isinstance(prebid, dict):
-                    st.markdown(f"**⏱️ 기간:** {prebid.get('duration', 'N/A')}")
-                    st.markdown(f"**🎯 목표:** {prebid.get('objective', 'N/A')}")
-                    st.markdown(f"**❓ 이유:** {prebid.get('why', 'N/A')}")
+                    st.markdown(f"**◎ 기간:** {prebid.get('duration', 'N/A')}")
+                    st.markdown(f"**• 목표:** {prebid.get('objective', 'N/A')}")
+                    st.markdown(f"**▷ 이유:** {prebid.get('why', 'N/A')}")
                     
                     deliverables = prebid.get('key_deliverables', [])
                     if deliverables:
-                        st.markdown("**📦 주요 산출물:**")
+                        st.markdown("**■ 주요 산출물:**")
                         for d in deliverables:
                             st.markdown(f"  • {d}")
                     
-                    st.markdown(f"**📊 기대 효과:** {prebid.get('expected_outcome', 'N/A')}")
+                    st.markdown(f"**▶ 기대 효과:** {prebid.get('expected_outcome', 'N/A')}")
                 else:
                     st.markdown("_항목 없음_")
             
             # Phase 1: PoC
             with col2:
-                st.markdown("### 🧪 Phase 1: PoC")
+                st.markdown("### ■ Phase 1: PoC")
                 poc = roadmap.get('phase_1_poc', {})
                 if poc and isinstance(poc, dict):
-                    st.markdown(f"**⏱️ 기간:** {poc.get('duration', 'N/A')}")
-                    st.markdown(f"**🎯 목표:** {poc.get('objective', 'N/A')}")
+                    st.markdown(f"**◎ 기간:** {poc.get('duration', 'N/A')}")
+                    st.markdown(f"**• 목표:** {poc.get('objective', 'N/A')}")
                     st.markdown(f"**❓ 이유:** {poc.get('why', 'N/A')}")
                     
                     deliverables = poc.get('key_deliverables', [])
                     if deliverables:
-                        st.markdown("**📦 주요 산출물:**")
+                        st.markdown("**■ 주요 산출물:**")
                         for d in deliverables:
                             st.markdown(f"  • {d}")
                     
-                    st.markdown(f"**📊 기대 효과:** {poc.get('expected_outcome', 'N/A')}")
+                    st.markdown(f"**▶ 기대 효과:** {poc.get('expected_outcome', 'N/A')}")
                 else:
                     st.markdown("_항목 없음_")
             
             # Phase 2: Proposal
             with col3:
-                st.markdown("### 📄 Phase 2: Proposal")
+                st.markdown("### ■ Phase 2: Proposal")
                 proposal = roadmap.get('phase_2_proposal', {})
                 if proposal and isinstance(proposal, dict):
-                    st.markdown(f"**⏱️ 기간:** {proposal.get('duration', 'N/A')}")
-                    st.markdown(f"**🎯 목표:** {proposal.get('objective', 'N/A')}")
+                    st.markdown(f"**◎ 기간:** {proposal.get('duration', 'N/A')}")
+                    st.markdown(f"**• 목표:** {proposal.get('objective', 'N/A')}")
                     st.markdown(f"**❓ 이유:** {proposal.get('why', 'N/A')}")
                     
                     deliverables = proposal.get('key_deliverables', [])
                     if deliverables:
-                        st.markdown("**📦 주요 산출물:**")
+                        st.markdown("**■ 주요 산출물:**")
                         for d in deliverables:
                             st.markdown(f"  • {d}")
                     
-                    st.markdown(f"**📊 기대 효과:** {proposal.get('expected_outcome', 'N/A')}")
+                    st.markdown(f"**▶ 기대 효과:** {proposal.get('expected_outcome', 'N/A')}")
                 else:
                     st.markdown("_항목 없음_")
         else:
             st.info("로드맵 데이터가 없습니다.")
         st.markdown("---")
         
-        # 7️⃣ 리스크 및 KPI
-        st.markdown("## 7️⃣ 리스크 및 KPI")
+        # [7] 리스크 및 KPI
+        st.markdown("## [7] 리스크 및 KPI")
         
         # 리스크
-        st.markdown("### ⚠️ 주요 리스크")
+        st.markdown("### ▲ 주요 리스크")
         risks = strategy_data.get('risks', [])
         
         if risks:
@@ -1487,33 +1653,33 @@ def render_strategy_detail_page():
                         "대응 액션": st.column_config.TextColumn("대응 액션", width="small")
                     }
                 )
-                st.caption(f"💡 총 {len(risk_summary_data)}개 리스크 항목")
+                st.caption(f"※ 총 {len(risk_summary_data)}개 리스크 항목")
                 
                 # 상세 내용 (expander로 표시)
-                st.markdown("#### 📋 리스크 상세 대응 계획")
+                st.markdown("#### ■ 리스크 상세 대응 계획")
                 for i, risk in enumerate(risks, 1):
                     if isinstance(risk, dict):
                         risk_id = risk.get('id', f'R{i}')
                         risk_name = risk.get('risk', '리스크 항목')[:50]
                         
                         with st.expander(f"[{risk_id}] {risk_name}...", expanded=False):
-                            st.markdown(f"**🔍 리스크 전문:** {risk.get('risk', 'N/A')}")
-                            st.markdown(f"**🛡️ Plan A (예방):** {risk.get('mitigation', 'N/A')}")
+                            st.markdown(f"**▷ 리스크 전문:** {risk.get('risk', 'N/A')}")
+                            st.markdown(f"**◈ Plan A (예방):** {risk.get('mitigation', 'N/A')}")
                             
                             plan_b = risk.get('plan_b', '')
                             if plan_b:
-                                st.markdown(f"**🔄 Plan B (대안):** {plan_b}")
+                                st.markdown(f"**◎ Plan B (대안):** {plan_b}")
                             
                             trigger = risk.get('trigger_condition', '')
                             if trigger:
-                                st.markdown(f"**⚡ 발동 조건:** {trigger}")
+                                st.markdown(f"**▸ 발동 조건:** {trigger}")
         else:
             st.info("리스크 데이터가 없습니다.")
         
         st.markdown("")
         
         # KPI
-        st.markdown("### 📊 핵심 KPI")
+        st.markdown("### ▶ 핵심 KPI")
         kpis = strategy_data.get('kpis', [])
         
         if kpis:
@@ -1564,13 +1730,13 @@ def render_strategy_detail_page():
                         "No.": st.column_config.NumberColumn("No.", width="small"),
                         "카테고리": st.column_config.TextColumn("카테고리", width="small"),
                         "KPI명": st.column_config.TextColumn("KPI명", width="medium"),
-                        "현재값 (Baseline)": st.column_config.TextColumn("📉 현재값", width="medium"),
-                        "목표값 (Target)": st.column_config.TextColumn("📈 목표값", width="medium"),
-                        "측정 방법": st.column_config.TextColumn("📏 측정 방법", width="large")
+                        "현재값 (Baseline)": st.column_config.TextColumn("▽ 현재값", width="medium"),
+                        "목표값 (Target)": st.column_config.TextColumn("△ 목표값", width="medium"),
+                        "측정 방법": st.column_config.TextColumn("▷ 측정 방법", width="large")
                     }
                 )
                 
-                st.caption(f"💡 총 {len(kpi_table_data)}개 KPI 지표")
+                st.caption(f"※ 총 {len(kpi_table_data)}개 KPI 지표")
         else:
             st.info("KPI 데이터가 없습니다.")
     
