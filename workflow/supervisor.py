@@ -9,7 +9,7 @@ from langchain.agents import create_tool_calling_agent, AgentExecutor
 # --- 개별 에이전트 import ---
 from workflow.agents.rfp_parser import rfp_parser
 from workflow.agents.internal_rag import internal_rag
-from workflow.agents.competitor_analysis import competitor_analysis
+from workflow.agents.competitor_analysis import competitor_analysis, generate_competitive_strategy
 from workflow.agents.strategy_synthesizer import strategy_synthesizer_v2 as strategy_synthesizer
 
 
@@ -168,6 +168,71 @@ class ParallelSupervisor:
         for company in comp_profiles.keys():
             print(f"  - {company}")
         
+        # ✅ SK AX 프로필 생성
+        skax_profile = {
+            "company_name": "SK AX (SK㈜ C&C)",
+            "core_competencies": [
+                "생성형 AI 및 LLM 기반 솔루션 개발",
+                "클라우드 인프라 구축 (하이브리드/프라이빗/퍼블릭)",
+                "스마트 팩토리 및 MES/MCS 시스템 구축",
+                "데이터 분석 플랫폼 (AccuInsight+, DataRobot AutoML)",
+                "디지털 전환(DX) 컨설팅 및 통합 솔루션"
+            ],
+            "key_solutions": [
+                "I-FACTs MCS (제조 물류 자동화)",
+                "AI 코딩 어시스턴트 (생성형 AI 기반)",
+                "차세대 택배/커머스 시스템 (클라우드 기반)",
+                "이중화 전자패치 (IFS - 네트워크 무중단)",
+                "Accu.Fabric Suite (통합 Digital Platform)"
+            ],
+            "industries": ["제조", "금융", "유통/물류", "공공", "반도체", "디스플레이"],
+            "technical_strengths": [
+                "Azure/AWS 멀티 클라우드 전문성",
+                "AutoML 및 데이터 분석 자동화",
+                "실시간 대용량 트래픽 처리 (오토 스케일링)",
+                "보안 강화 솔루션 (프라이빗 클라우드, VDI)",
+                "End-to-End 프로젝트 수행 역량"
+            ]
+        }
+        
+        # ✅ 경쟁사 대응 전략 생성 (각 경쟁사별)
+        competitive_strategies = []
+        if comp_profiles:
+            print("\n🔥 [경쟁사 대응 전략] 생성 중...\n")
+            try:
+                # 경쟁사 리스트 준비
+                competitors_list = []
+                for company, profile in comp_profiles.items():
+                    competitors_list.append({
+                        "company": company,
+                        "swot": profile.get("swot", {}),
+                        "company_summary": profile.get("company_summary", ""),
+                        "key_technologies": profile.get("key_technologies", [])
+                    })
+                
+                # generate_competitive_strategy 호출
+                strategy_response = await generate_competitive_strategy.ainvoke({
+                    "skax_profile": skax_profile,
+                    "competitors": competitors_list
+                })
+                
+                if isinstance(strategy_response, list):
+                    competitive_strategies = strategy_response
+                    print(f"✅ [경쟁사 대응 전략] {len(competitive_strategies)}개 생성 완료")
+                elif isinstance(strategy_response, dict):
+                    # dict인 경우 리스트로 변환
+                    for company, strategies in strategy_response.items():
+                        if isinstance(strategies, list):
+                            competitive_strategies.extend(strategies)
+                        else:
+                            competitive_strategies.append(strategies)
+                    print(f"✅ [경쟁사 대응 전략] {len(competitive_strategies)}개 생성 완료")
+                else:
+                    print(f"⚠️ [경쟁사 대응 전략] 예상치 못한 응답 형식: {type(strategy_response)}")
+            except Exception as e:
+                print(f"⚠️ [경쟁사 대응 전략] 생성 실패: {e}")
+                competitive_strategies = []
+        
         strategy_result = await strategy_synthesizer.ainvoke({
             "requirements": requirements,
             "internal_matches": internal_matches,
@@ -175,12 +240,31 @@ class ParallelSupervisor:
             "temperature": 0.7
         })
 
+        # ✅ 생성된 경쟁사 대응 전략을 strategy에 통합
+        if competitive_strategies and isinstance(strategy_result, dict):
+            strategy_data = strategy_result.get("strategy", {})
+            if isinstance(strategy_data, dict):
+                # appendix.competitor_counters에 추가
+                appendix = strategy_data.get("appendix", {})
+                if not isinstance(appendix, dict):
+                    appendix = {}
+                
+                # 기존 competitor_counters와 병합
+                existing_counters = appendix.get("competitor_counters", [])
+                appendix["competitor_counters"] = competitive_strategies + existing_counters
+                strategy_data["appendix"] = appendix
+                strategy_result["strategy"] = strategy_data
+                
+                print(f"✅ [Supervisor] 경쟁사 대응 전략 {len(competitive_strategies)}개가 strategy에 통합됨")
+
         print("\n✅ [Supervisor] 전체 프로세스 완료\n")
         return {
             "rfp_parser": rfp_data,
             "internal_rag": internal_data,
             "competitor_analysis": competitor_data,
-            "strategy": strategy_result
+            "strategy": strategy_result,
+            "skax_profile": skax_profile,
+            "competitive_strategies": competitive_strategies
         }
 
 

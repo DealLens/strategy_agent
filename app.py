@@ -5,6 +5,7 @@ import time
 import base64
 import threading
 import asyncio
+import re
 from datetime import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
@@ -727,7 +728,9 @@ def render_analysis_detail():
                         if strategy_data.get('differentiation'):
                             st.markdown("\n**✨ 차별화 포인트:**")
                             for diff in strategy_data['differentiation']:
-                                st.markdown(f"- {diff}")
+                                # "차별화포인트 X:", "차별화 포인트 X:" 같은 접두어 제거
+                                cleaned_diff = re.sub(r'^차별화\s*포인트\s*\d+\s*[:：]\s*', '', str(diff), flags=re.IGNORECASE)
+                                st.markdown(f"- {cleaned_diff}")
                     else:
                         st.info("분석 결과가 없습니다.")
                 
@@ -1248,13 +1251,18 @@ def render_strategy_detail_page():
             for company, counters in companies.items():
                 st.markdown(f"### 🏢 {company}")
                 for j, counter_text in enumerate(counters, 1):
-                    # 강점/약점 분리 표시
-                    if '강점' in counter_text:
-                        st.markdown(f"**💪 강점 대응 {j}:**")
-                    elif '약점' in counter_text:
-                        st.markdown(f"**⚠️ 약점 활용 {j}:**")
-                    else:
-                        st.markdown(f"**{j}.**")
+                    # counter_text가 이미 이모지/헤더를 포함하고 있는지 확인
+                    has_prefix = counter_text.strip().startswith(('💪', '⚠️', '🔥', '✨'))
+                    
+                    if not has_prefix:
+                        # 헤더가 없으면 강점/약점 분리 표시
+                        if '강점' in counter_text:
+                            st.markdown(f"**💪 강점 대응 {j}:**")
+                        elif '약점' in counter_text:
+                            st.markdown(f"**⚠️ 약점 활용 {j}:**")
+                        else:
+                            st.markdown(f"**{j}.**")
+                    
                     st.markdown(counter_text)
                     st.markdown("")
                 st.markdown("---")
@@ -1264,7 +1272,9 @@ def render_strategy_detail_page():
         if differentiation:
             st.markdown("### ✨ 당사 차별화 포인트 (정량 검증)")
             for i, diff in enumerate(differentiation, 1):
-                st.markdown(f"**{i}.** {diff}")
+                # "차별화포인트 X:", "차별화 포인트 X:" 같은 접두어 제거
+                cleaned_diff = re.sub(r'^차별화\s*포인트\s*\d+\s*[:：]\s*', '', str(diff), flags=re.IGNORECASE)
+                st.markdown(f"**{i}.** {cleaned_diff}")
         
         if not competitor_counters and not differentiation:
             st.info("경쟁사 대응 전략 데이터가 없습니다.")

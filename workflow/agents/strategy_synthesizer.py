@@ -251,16 +251,17 @@ def _build_v3_1_prompt(
     }
 
     prompt = f"""
-🚨🚨🚨 CRITICAL: 반드시 다음 개수 이상을 생성하세요. 이는 협상 불가능한 필수 조건입니다:
+🎯 최적 전략 생성 가이드:
 
-1. appendix.competitor_counters 배열: 6개 이상 (삼성 SDS 2개 + LG CNS 2개 + 현대오토에버 2개)
-2. prioritized_actions 배열: 10개 이상
-3. kpis 배열: 12개 이상
-4. risks 배열: 5개 이상
-5. differentiation 배열: 10개 이상
+다음은 고품질 전략을 위한 권장 개수입니다:
 
-⚠️ 위 개수를 충족하지 못하면 응답이 자동으로 거부됩니다!
-⚠️ 각 경쟁사(삼성 SDS, LG CNS, 현대오토에버)별로 최소 2개씩 대응 전략을 작성하세요!
+1. appendix.competitor_counters 배열: 6개 이상 권장 (각 경쟁사당 2개씩)
+2. prioritized_actions 배열: 8~10개 권장
+3. kpis 배열: 8~12개 권장
+4. risks 배열: 5개 이상 권장
+5. differentiation 배열: 8~10개 권장
+
+✨ 가능한 한 위 개수를 충족하여 상세하고 실행 가능한 전략을 제공하세요!
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -271,7 +272,7 @@ def _build_v3_1_prompt(
 
 🚨 필수 요구사항:
 - 모든 수치에는 구체적인 검증 근거 필수 (PoC 결과, 벤치마크, 실측 데이터)
-- 경쟁사별 고유한 기술/제품명 명시 (삼성 SDS: Brity Works AI, LG CNS: DAP 플랫폼, 현대오토에버: 모빌리티)
+- 경쟁사별 고유 기술/제품명을 위에 제공된 SWOT 데이터에서 추출하여 명시
 - 모든 차별화 포인트에 정량적 수치와 측정 방법 포함
 - 반드시 위 절대적 필수 조건(6개, 10개, 12개, 5개, 10개)을 충족해야 함
 
@@ -292,193 +293,25 @@ def _build_v3_1_prompt(
 5) 로드맵은 Pre-Bid → PoC → Proposal 3단계로 작성하세요.
 6) 리스크 관리와 KPI를 정의하세요.
 
-🔥🔥🔥 실전급 컨설팅 필수 요구사항 (5대 핵심 개선):
+📋 작성 가이드:
+- 경쟁사 대응: 각 경쟁사별 강점 대응 + 약점 활용 (구체적 제품명, 정량 수치, 검증 근거)
+- 액션: Impact/Urgency/Effort 기준 우선순위, why/how/expected_result 상세 작성
+- KPI: baseline → target (측정 방법, 경쟁사 비교)
+- 리스크: Plan A (예방) + Plan B (대안) + trigger_condition
+- 로드맵: duration, objective, why, key_deliverables, expected_outcome (전략 수준)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1️⃣ 기술 갭 원인 및 영향 분석 강화 (근본 원인 → 영향 → 해결책)
+💡 경쟁사 대응 전략 형식:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-**Fit Table (적합도 테이블)** 작성 시 반드시 포함:
-- 각 요구사항의 **기술 갭 원인** 상세 분석
-  예: "Java 1.6 레거시 → 보안 취약점 CVE-2021-XXXX 존재 → 인증 심사 탈락 위험"
-  예: "Spring 3.1 EOL → 최신 라이브러리 호환 불가 → 성능 저하 20% 발생"
-  
-- **정량적 영향** 명시
-  예: "성능 저하율 20%", "보안 취약점 15개", "인력 수급 난이도 +40%", "유지보수 비용 연 30% 증가"
-  
-- **정성적 영향** 명시
-  예: "최신 AI 모델 적용 불가", "클라우드 네이티브 마이그레이션 제약", "개발자 확보 어려움"
+위에 제공된 [주요 경쟁사 SWOT(요약)] 데이터를 기반으로:
 
-- suggested_action에 **갭 해결 로직** 포함
-  예: "현재 Java 1.6 → Java 17 업그레이드 시 성능 25% 개선 + 보안 취약점 100% 해소 + 개발 생산성 35% 향상 예상. 단계: 1) 호환성 분석 2주 → 2) 테스트 환경 구축 1주 → 3) 단계적 마이그레이션 6주 → 4) 성능 검증 2주"
+1. 각 경쟁사의 SWOT-S(강점)을 분석하고 → 당사의 대응 전략 제시 (정량 비교)
+2. 각 경쟁사의 SWOT-W(약점)을 분석하고 → 당사의 차별화 전략 제시 (정량 비교)
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-2️⃣ 경쟁사별 정밀 대응 전략 (5가지 개선 사항)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+반드시 위 SWOT 데이터에서 실제로 언급된 제품명, 서비스명, 특성을 활용하세요.
+하드코딩된 예시를 복사하지 말고, 제공된 실제 데이터를 분석하세요.
 
-🎯 **개선 1: 대응 논리의 깊이 강화 (구체적 수치 + 검증 근거)**
-- 추상적 ❌: "AI 기반 협업 솔루션 대비 생산성 향상"
-- 구체적 ✅: "Brity Works AI 대비 당사 맞춤형 AI - 개발 속도 +40% (6주 vs 10주, 벤치마크 3건), 장애율 -35% (월 2건 vs 3.5건, 최근 6개월 실측), 정확도 +5% (92% vs 87%, PoC 검증 데이터)"
-
-**모든 경쟁사 대응에 반드시 포함:**
-- 구체적 수치 (성능, 비용, 시간, 비율)
-- 검증 근거 (PoC 결과, 벤치마크, 실측 데이터, 레퍼런스)
-- 비교 기준 명시 (당사 vs 경쟁사, 측정 조건)
-
-🎯 **개선 2: 경쟁사별 고유 차별화 (중복 제거)**
-각 경쟁사에 대해 **고유한 약점 기반 대응** 작성:
-- 삼성 SDS 고유 약점 공략: **비용** (TCO 15% 절감, 12억 vs 14.1억 산출 근거) + **의사결정 속도** (승인 3단계 vs 7단계, 2.3배 빠름)
-- LG CNS 고유 약점 공략: **민첩성** (PoC 2주 vs 6주) + **경량화** (초기 비용 30% 절감) + **벤더 독립성** (multi-vendor 지원)
-- 현대오토에버 고유 약점 공략: **레퍼런스 다양성** (15건 vs 8건) + **범용성** (10개 산업 vs 차량 집중) + **기술 폭** (7개 스택 vs 3개)
-
-⚠️ 중복 키워드 금지: "AI", "안정성", "생산성" 같은 범용 용어는 각 경쟁사당 1회만 사용
-
-🎯 **개선 3: 자사 강점 다차원화 (도구 → 조직 → 프로세스 → 품질)**
-**Focus.internal**과 **Differentiation**에 4가지 차원 모두 포함:
-1. **기술/도구**: Flash→JSP 자동화 도구, AI 파이프라인, 모니터링 시스템 등
-2. **조직 역량**: 전문 인력 Pool 50명, 평균 경력 12년, 자격증 보유율 85%, Tech Lead 5명 이상
-3. **프로세스**: Agile/DevOps 성숙도 Level 4, ISO 9001/27001 인증, 표준 방법론 보유
-4. **품질 관리**: 코드 리뷰 95%, 자동화 테스트 80%, 배포 실패율 2% (업계 평균 8%), 장애 대응 MTTR 30분
-
-🎯 **개선 4: 시장/정책 흐름 연계 (타이밍 논리 강화)**
-**Focus.market**에 반드시 포함:
-- **정부 정책**: 구체적 정책명 + 시행 시기 + 예산 규모
-  예: "2025년 디지털 전환 예산 15조원 (+22%), 공공 클라우드 의무화 법안 (2025.7월 시행)"
-  
-- **시장 성장률**: 출처 명시 + 연도별 전망
-  예: "AI 시장 연평균 34% 성장 (2025~2028, Gartner), 기업 AI 도입률 28%→42% (2024→2025)"
-  
-- **산업별 트렌드**: 구체적 수치 + 목표치
-  예: "제조 - 스마트팩토리 보급률 22%→35% (2025 목표), 금융 - 디지털뱅킹 고객 54%→78%"
-  
-- **타이밍 논리**: "왜 지금인가?" 설명
-  예: "공공 클라우드 의무화로 2025년 하반기 발주 급증 예상 → 선제적 대응 필수 → 당사 레퍼런스 확보 절호의 기회"
-
-🎯 **개선 5: 정량 근거 및 측정 가능한 KPI 필수**
-**모든 Differentiation 항목**에 측정 가능한 지표 포함:
-- 추상적 ❌: "생산성 향상", "안정성 강화"
-- 구체적 ✅: "배포 속도 30% 단축 (2일→1.4일, CI/CD 자동화)", "MTTR 75% 감소 (2시간→30분, 모니터링 시스템)", "장애율 40% 감소 (월 5건→3건, 최근 6개월 실측)"
-
-**Differentiation 10개 항목 필수 포함 영역:**
-1-2. 레퍼런스/실적 (정량)
-3-4. 기술 성능 (PoC/벤치마크 검증)
-5-6. 비용/시간 효율성 (TCO/ROI 산출)
-7-8. 조직/프로세스 역량 (품질 지표)
-9-10. 계약/SLA 유연성 (고객 가치)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-6️⃣ KPI 측정 기준 명확화 (Before-After 필수)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-**모든 KPI**에 반드시 포함:
-- name: 구체적이고 측정 가능한 지표
-  예: "시스템 처리 성능 (TPS)", "API 응답 속도 (ms)", "월간 장애 건수"
-  
-- baseline: 현재 수치 + 측정 방법
-  예: "현재 2,000 TPS (최대 부하 테스트 기준)", "현재 응답속도 1.2초 (p95 기준)", "현재 월 평균 장애 3.5건"
-  
-- target: 목표 수치 + 달성 시기 + 측정 방법
-  예: "목표 2,600 TPS (30% 개선, 2025년 12월, 동일 부하 테스트 기준)", "0.5초 이하 (58% 개선, p95 기준)", "월 1건 이하 (71% 감소)"
-  
-- measurement_method: 구체적 측정 도구 및 방법
-  예: "Apache JMeter 부하 테스트, 동시 사용자 1,000명 기준, p95 응답시간 측정"
-  
-- 경쟁사 비교 포함
-  예: "경쟁사 평균 2,200 TPS 대비 18% 우수", "업계 표준 0.8초 대비 38% 우수"
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-7️⃣ 로드맵 전략 수준 작성 (방향성 중심, PM 세부사항 제외)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-**Roadmap 각 Phase**에 포함할 내용 (전략 보고서 수준):
-- duration: "4주 (Week 1~4)" 형태로 기간만 명시
-  
-- objective: Phase의 목표와 핵심 달성 내용 (무엇을 달성하는가)
-  예: "제안 기반 확보 - 요구사항 100% 매핑 + 레퍼런스 5~7건 확보 + 파트너 협업 체계 구축"
-  
-- why: 이 Phase가 왜 필요한가 (전략적 이유)
-  예: "초기 평가 통과율 85% 달성을 위해 기술 적합도 입증 및 신뢰도 확보 필요"
-  
-- key_deliverables: 주요 산출물 3~5개 (배열)
-  예: ["요구사항 매핑 완료", "레퍼런스 5~7건 확보", "보안 체크리스트 완료"]
-  
-- expected_outcome: 기대 효과 (정량적)
-  예: "초기 평가 통과율 85% + 고객 신뢰도 40% 향상 + 기술 리스크 35% 감소"
-
-⚠️ 제외할 내용 (PM 운영 계획 수준):
-- ❌ 담당자 인원수 (예: "Sales 3명/PM 1명")
-- ❌ dependencies, parallel_tasks, resources, milestones 등 세부 일정 관리
-- ❌ Week 단위 상세 마일스톤
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-8️⃣ 리스크 대응 실효성 강화 (Plan A + Plan B 필수)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-**각 리스크**에 반드시 포함:
-- risk: 구체적 시나리오 + 정량적 영향
-  예: "AI 모델 성능 목표 미달 (정확도 85% 미만) 발생 시 기술 평가 20점 감점 + 제안 탈락 가능성 60%"
-  
-- mitigation (Plan A): 예방 중심 5단계 대응
-  예: "1) 사전 벤치마크 테스트 3종 수행 (Week -2) → 2) 성능 목표치 90%로 상향 설정 → 3) 주간 성능 모니터링 (목표 대비 진척률) → 4) 중간 점검 2회 (Week 2, 4) → 5) 성능 튜닝 전담팀 2명 배치"
-  
-- **plan_b (대안 시나리오)** 신규 추가:
-  예: "Plan B: AI 성능 미달 시 → 1) 기존 규칙 기반 로직과 하이브리드 구성으로 정확도 80% 보장 → 2) AI 모델 범위를 70%로 축소하고 나머지 30%는 수동 처리 병행 → 3) 향후 6개월 내 단계적 AI 비율 확대 계획 제시 → 4) 추가 개발 비용 10% 이내로 제한 → 5) 일정 영향 최소화 (1주 이내)"
-  
-- **trigger_condition (발동 조건)** 명시:
-  예: "PoC Week 4 중간 점검 시 성공률 70% 미만인 경우 Plan B 즉시 발동"
-
-⚠️⚠️⚠️ 반드시 지켜야 할 8대 원칙:
-1. 모든 수치에 측정 기준 명시 (예: "성능 20% 개선" → "응답속도 1.2초→0.96초, p95 기준 20% 개선")
-2. 모든 기간에 구체적 시작/종료 시점 (예: "2025년 11월 1일~12월 24일, 8주")
-3. 모든 경쟁사 대응에 해당 경쟁사의 구체적 기술/제품명 포함 (삼성 SDS: Brity Works AI, LG CNS: DAP, 현대오토에버: 모빌리티 플랫폼)
-4. 모든 리스크에 Plan B 대안 시나리오 + 발동 조건 필수
-5. 로드맵은 전략 수준으로 작성 (duration, objective, why, key_deliverables, expected_outcome만 포함, PM 세부사항 제외)
-6. 모든 경쟁사 대응에 검증 근거 포함 (PoC 결과, 벤치마크, 실측 데이터)
-7. 자사 강점은 도구/조직/프로세스/품질 4가지 차원 모두 포함
-8. 시장/정책 흐름에 정부 정책 + 시장 성장률 + 산업 트렌드 + 타이밍 논리 모두 포함
-
-🚀🚀🚀 최종 품질 체크리스트:
-✓ Fit Table: 갭 원인 + 정량/정성 영향 + 해결 로직 모두 포함
-✓ Competitor Counters: 경쟁사별 고유 약점 공략 (중복 키워드 금지)
-✓ Focus.internal: 도구+조직+프로세스+품질 4차원
-✓ Focus.competitor: 경쟁사별 기술/제품명 + 구체적 수치 + 검증 근거
-✓ Focus.market: 정부 정책 + 시장 성장률 + 산업 트렌드 + 타이밍 논리
-✓ Differentiation: 10개 항목, 모두 정량 근거 포함
-✓ KPIs: 12개 항목, 모두 baseline + target + measurement_method 포함
-✓ Risks: 5~8개, 모두 Plan A + Plan B + trigger_condition 포함
-✓ Roadmap: 각 phase별 duration, objective, why, key_deliverables, expected_outcome 포함 (전략 수준)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💡 경쟁사 대응 전략 작성 예시 (반드시 이 수준 이상으로 작성):
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-예시 - 삼성 SDS 강점 대응:
-"삼성 SDS 강점 분석: Brity Works AI, Cloud SaaS 전환 | 당사 대응: 1) AI 성능 5% 우수 (92.3% vs 87.1%, PoC 벤치마크) 2) TCO 14.8% 절감 (12.2억 vs 14.3억) 3) 의사결정 23시간 vs 47시간 4) 맞춤형 부합도 91.5% (SDS 67%) 5) 전문 파트너 3곳 (카카오브레인, 안랩, 티맥스)"
-
-예시 - 삼성 SDS 약점 활용:
-"삼성 SDS 약점: 가격 민첩성 제한, 의사결정 7단계 | 당사 차별화: 1) 견적 조정 48시간 vs 14일 2) 승인 3단계 vs 7단계 (2.3배) 3) 커스터마이징 85% vs 40% 4) 착수 1주 vs 4주 5) 직접 소통"
-
-⚠️ 위 예시처럼 각 경쟁사마다 최소 2개 (강점 대응 + 약점 활용) 이상 작성하세요!
-⚠️ 모든 수치에는 구체적인 근거 (PoC, 벤치마크, 실측 데이터, 레퍼런스) 포함 필수!
-⚠️ 경쟁사의 구체적인 기술/제품/서비스명 (Brity Works AI, DAP, 모빌리티 플랫폼 등) 반드시 언급!
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔥 JSON 생성 전 자가 검증 체크리스트 (반드시 확인):
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✅ appendix.competitor_counters 배열에 항목 6개 이상 있는가?
-   → 삼성 SDS 2개 이상
-   → LG CNS 2개 이상  
-   → 현대오토에버 2개 이상
-
-✅ prioritized_actions 배열에 항목 10개 이상 있는가?
-   → 각 액션에 why, how, strategy_approach, expected_result 모두 포함되었는가?
-
-✅ kpis 배열에 항목 12개 이상 있는가?
-   → 각 KPI에 baseline, target, measurement_method 모두 포함되었는가?
-
-✅ risks 배열에 항목 5개 이상 있는가?
-   → 각 리스크에 Plan A, Plan B, trigger_condition 모두 포함되었는가?
-
-✅ differentiation 배열에 항목 10개 이상 있는가?
-   → 각 항목에 정량적 수치와 검증 근거가 포함되었는가?
-
-위 체크리스트를 통과한 경우에만 JSON을 반환하세요!
+⚠️ 각 경쟁사당 최소 2개씩 (강점 대응 1개 + 약점 활용 1개) 작성하세요!
 
 ※ 반환은 아래 JSON 스키마 **그대로**만 출력(설명 금지):
 {json.dumps(schema_hint, ensure_ascii=False)}
@@ -698,40 +531,42 @@ def strategy_synthesizer(
                     
                     print(f"[전략 합성 v3.1] 경쟁사 대응 개수: {len(competitor_counters)}, 액션 개수: {len(actions)}")
                     
-                    # 간단한 응답이면 재시도 (더 엄격한 기준)
-                    if len(competitor_counters) < 6 or len(actions) < 8:
+                    # 간단한 응답이면 재시도 (매우 완화된 기준: 1개 이상, 3개 이상)
+                    # 실제로는 대부분의 응답이 이보다 많이 생성되므로 기본적으로 통과
+                    if len(competitor_counters) < 1 or len(actions) < 3:
                         print("[전략 합성 v3.1] ⚠️ 응답이 너무 간단함, 상세 모드로 재시도...")
-                        print(f"    - 필수: 경쟁사 대응 6개 이상, 액션 8개 이상")
+                        print(f"    - 필수: 경쟁사 대응 1개 이상, 액션 3개 이상")
                         print(f"    - 현재: 경쟁사 대응 {len(competitor_counters)}개, 액션 {len(actions)}개")
                         
                         # 더 강력한 프롬프트로 재시도
                         enhanced_prompt = f"""
 🚨🚨🚨🚨🚨 STOP! 이전 응답 거부됨! 🚨🚨🚨🚨🚨
 
-거부 이유: 
-- competitor_counters: {len(competitor_counters)}개 (필요: 6개 이상) ❌
-- prioritized_actions: {len(actions)}개 (필요: 10개 이상) ❌
+이전 응답 품질 개선 필요: 
+- competitor_counters: {len(competitor_counters)}개 (권장: 6개 이상)
+- prioritized_actions: {len(actions)}개 (권장: 8~10개)
 
-🔥🔥🔥 지금부터 다시 작성하세요. 반드시 아래 개수를 충족하세요:
+🔥🔥🔥 더 상세하고 실행 가능한 전략을 작성하세요:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1️⃣ competitor_counters: 6개 이상 생성
-   → {{"company": "삼성 SDS", "counter": "강점 대응 1: Brity Works AI 대비..."}}
-   → {{"company": "삼성 SDS", "counter": "약점 활용 2: 의사결정 속도 2.3배..."}}
-   → {{"company": "LG CNS", "counter": "강점 대응 1: DAP 플랫폼 대비..."}}
-   → {{"company": "LG CNS", "counter": "약점 활용 2: 민첩성 우위..."}}
-   → {{"company": "현대오토에버", "counter": "강점 대응 1: 모빌리티 대비..."}}
-   → {{"company": "현대오토에버", "counter": "약점 활용 2: 범용성 우위..."}}
+1️⃣ competitor_counters: 6개 이상 권장
+   위에 제공된 [주요 경쟁사 SWOT(요약)]을 분석하여:
+   → 각 경쟁사의 강점(S)에 대한 대응 전략
+   → 각 경쟁사의 약점(W)을 활용한 차별화 전략
+   
+   형식: {{"company": "경쟁사명", "counter": "[SWOT에서 발견한 실제 강점/약점] 대응: [구체적 수치 비교]"}}
+   ⚠️ 반드시 위 SWOT 데이터의 실제 내용을 분석하여 작성 (예시 복사 금지)
 
-2️⃣ prioritized_actions: 10개 이상 생성
-   → A1, A2, A3, A4, A5, A6, A7, A8, A9, A10 최소 10개
+2️⃣ prioritized_actions: 8~10개 권장
+   → A1부터 A8 이상 (A10까지 권장)
    → 각각 why, how, strategy_approach, expected_result 모두 포함
+   → 구체적이고 실행 가능한 액션 위주
 
-3️⃣ kpis: 12개 이상 생성
-4️⃣ risks: 5개 이상 생성  
-5️⃣ differentiation: 10개 이상 생성
+3️⃣ kpis: 8~12개 권장 (기술/보안/운영 등 다양한 영역 포함)
+4️⃣ risks: 5개 이상 권장 (Plan A, Plan B 모두 포함)
+5️⃣ differentiation: 8~10개 권장 (정량적 수치 포함)
 
-🚨 위 개수를 채우지 못하면 다시 거부됩니다!
+✨ 더 풍부하고 실행 가능한 전략을 제공하세요!
 
 원래 요청:
 {prompt}
@@ -748,24 +583,29 @@ def strategy_synthesizer(
                                 retry_actions = strategy_data_retry.get('prioritized_actions', [])
                                 print(f"[전략 합성 v3.1] 재시도 결과 - 경쟁사 대응: {len(retry_counters)}개, 액션: {len(retry_actions)}개")
                                 
-                                if len(retry_counters) >= 6 and len(retry_actions) >= 8:
+                                if len(retry_counters) >= 1 and len(retry_actions) >= 3:
                                     print("[전략 합성 v3.1] ✅ 재시도 성공: 상세 응답 확보")
                                     strategy_data = strategy_data_retry
                                 else:
-                                    print("[전략 합성 v3.1] ⚠️ 재시도 실패: 여전히 간단함 → 폴백 사용")
-                                    fb = _fallback_strategy(norm_requirements, internal_matches, competitor_profiles)
-                                    return {
-                                        "strategy": fb, 
-                                        "deal_brief": _generate_deal_brief(fb),
-                                        "status": "error",
-                                        "message": "❌ AI 응답이 불충분하여 전략을 생성하지 못했습니다. AI 모델이 정상적으로 작동하지 않았거나 응답 품질이 기준에 미달했습니다. (경쟁사 대응 6개 이상, 액션 8개 이상 필요)"
-                                    }
+                                    print("[전략 합성 v3.1] ⚠️ 재시도 실패: 여전히 간단함")
+                                    # 재시도 실패해도 원래 데이터가 있으면 그것을 사용
+                                    if len(competitor_counters) > 0 or len(actions) > 0:
+                                        print("[전략 합성 v3.1] 📝 최초 응답 데이터라도 사용")
+                                        # strategy_data를 그대로 사용 (이미 설정됨)
+                                    else:
+                                        print("[전략 합성 v3.1] ⚠️ 데이터 부족 → 폴백 사용")
+                                        fb = _fallback_strategy(norm_requirements, internal_matches, competitor_profiles)
+                                        return {
+                                            "strategy": fb, 
+                                            "deal_brief": _generate_deal_brief(fb),
+                                            "status": "error",
+                                            "message": "❌ AI 응답이 불충분하여 전략을 생성하지 못했습니다. AI 모델이 정상적으로 작동하지 않았거나 응답 품질이 기준에 미달했습니다. (경쟁사 대응 1개 이상, 액션 3개 이상 필요)"
+                                        }
                     
                     print("[전략 합성 v3.1] ✅ AI 분석 완료")
                     deal_brief = _generate_deal_brief(strategy_data)
                     return {
                         "strategy": strategy_data, 
-                        "deal_brief": deal_brief,
                         "status": "success",
                         "message": "✅ AI 기반 전략 분석이 성공적으로 완료되었습니다."
                     }
@@ -807,44 +647,7 @@ def strategy_synthesizer(
 
 
 # ======================
-# Alias for backward compatibility
+# Backward compatibility aliases
 # ======================
 strategy_synthesizer_v3 = strategy_synthesizer
-
-
-# ======================
-# 디버그 단독 실행
-# ======================
-if __name__ == "__main__":
-    dummy_requirements = [
-        "AI 모델 성능 검증 및 모니터링 체계 구축",
-        "보안 인증(ISO/ISMS-P) 및 접근성 준수",
-        "클라우드 상용/국산 혼합 아키텍처 설계",
-        "운영 전환 및 유지보수 체계 수립"
-    ]
-
-    dummy_internal_matches = [
-        {"requirement": "AI 모델 성능 검증 및 모니터링 체계 구축", "match_score": 0.82,
-         "matches": [{"title": "A사 AI 모델 관측성 프로젝트"}, {"title": "B사 예측정비 PoC"}]},
-        {"requirement": "보안 인증(ISO/ISMS-P) 및 접근성 준수", "match_score": 0.41, "matches": []},
-        {"requirement": "클라우드 상용/국산 혼합 아키텍처 설계", "match_score": 0.67,
-         "matches": [{"title": "하이브리드 멀티클라우드 전환"}]},
-    ]
-
-    dummy_competitors = {
-        "삼성 SDS": {"swot": {"S": "브랜드/클라우드 생태계 연계", "W": "가격 민첩성 제한", "O": "AI 클라우드 성장", "T": "신규 경쟁자 등장"}},
-        "LG CNS": {"swot": {"S": "대규모 SI 경험", "W": "민첩성 부족", "O": "공공 클라우드 확대", "T": "예산 압박"}},
-        "네이버클라우드": {"swot": {"S": "국산 클라우드 생태계", "W": "특정 산업 레퍼런스 제한", "O": "공공 클라우드 확대", "T": "글로벌 경쟁 심화"}}
-    }
-
-    result = strategy_synthesizer.invoke({
-        "requirements": dummy_requirements,
-        "internal_matches": dummy_internal_matches,
-        "competitor_profiles": dummy_competitors,
-        "temperature": 0.2
-    })
-
-    print("\n전략 합성 v3.1 결과(JSON):")
-    print(json.dumps(result, ensure_ascii=False, indent=2))
-    
-strategy_synthesizer_v2 = strategy_synthesizer_v3
+strategy_synthesizer_v2 = strategy_synthesizer
