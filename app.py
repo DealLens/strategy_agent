@@ -1441,49 +1441,72 @@ def render_strategy_detail_page():
         risks = strategy_data.get('risks', [])
         
         if risks:
+            import pandas as pd
+            
+            # 리스크 요약 테이블
+            risk_summary_data = []
             for i, risk in enumerate(risks, 1):
                 if isinstance(risk, dict):
                     likelihood = risk.get('likelihood', 'medium').upper()
                     impact = risk.get('impact', 'medium').upper()
                     
-                    # 리스크 레벨 및 점수 (strategy_synthesizer에서 제공)
-                    risk_level_display = risk.get('risk_level', '')
-                    risk_score = risk.get('risk_score', 0)
+                    # 리스크 레벨 계산
+                    if likelihood == "HIGH" and impact == "HIGH":
+                        level_emoji = "🔴"
+                        level_text = "높음"
+                    elif likelihood == "HIGH" or impact == "HIGH":
+                        level_emoji = "🟡"
+                        level_text = "중간"
+                    else:
+                        level_emoji = "🟢"
+                        level_text = "낮음"
                     
-                    # 폴백: risk_level이 없으면 자동 계산
-                    if not risk_level_display:
-                        risk_level_emoji = "🔴" if likelihood == "HIGH" and impact == "HIGH" else "🟡" if likelihood == "HIGH" or impact == "HIGH" else "🟢"
-                        risk_level_display = f"{risk_level_emoji} {likelihood} x {impact}"
-                    
-                    risk_id = risk.get('id', f'R{i}')
-                    
-                    st.markdown(f"### {risk_level_display} [{risk_id}] {risk.get('risk', '리스크 항목')}")
-                    
-                    # 리스크 점수 표시 (바 차트 형태)
-                    if risk_score > 0:
-                        risk_bar = "█" * risk_score + "░" * (10 - risk_score)
-                        st.markdown(f"**📊 리스크 점수:** {risk_score}/10 {risk_bar}")
-                    
-                    st.markdown(f"**📊 평가:** 가능성 {likelihood} | 영향도 {impact}")
-                    st.markdown(f"**🛡️ 대응 방안 (Plan A):** {risk.get('mitigation', 'N/A')}")
-                    
-                    # Plan B 대안 시나리오 (5️⃣ 개선)
-                    plan_b = risk.get('plan_b', '')
-                    if plan_b:
-                        st.markdown(f"**🔄 대안 시나리오 (Plan B):** {plan_b}")
-                    
-                    # 발동 조건
-                    trigger_condition = risk.get('trigger_condition', '')
-                    if trigger_condition:
-                        st.markdown(f"**⚡ 발동 조건:** {trigger_condition}")
-                    
-                    # 대응 액션 매핑
-                    mitigation_action_ids = risk.get('mitigation_action_ids', [])
-                    if mitigation_action_ids:
-                        st.markdown(f"**🔗 대응 액션:** {', '.join(mitigation_action_ids)}")
-                    st.markdown("---")
-                else:
-                    st.markdown(f"{i}. {risk}")
+                    risk_summary_data.append({
+                        "No.": f"{risk.get('id', f'R{i}')}",
+                        "레벨": f"{level_emoji} {level_text}",
+                        "카테고리": risk.get('category', '-'),
+                        "리스크": risk.get('risk', '리스크 항목')[:60] + "..." if len(risk.get('risk', '')) > 60 else risk.get('risk', '리스크 항목'),
+                        "가능성": likelihood,
+                        "영향도": impact,
+                        "대응 액션": ", ".join(risk.get('mitigation_action_ids', []) or ["-"])
+                    })
+            
+            if risk_summary_data:
+                df_risk = pd.DataFrame(risk_summary_data)
+                st.dataframe(
+                    df_risk,
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={
+                        "No.": st.column_config.TextColumn("No.", width="small"),
+                        "레벨": st.column_config.TextColumn("레벨", width="small"),
+                        "카테고리": st.column_config.TextColumn("카테고리", width="small"),
+                        "리스크": st.column_config.TextColumn("리스크 내용", width="large"),
+                        "가능성": st.column_config.TextColumn("가능성", width="small"),
+                        "영향도": st.column_config.TextColumn("영향도", width="small"),
+                        "대응 액션": st.column_config.TextColumn("대응 액션", width="small")
+                    }
+                )
+                st.caption(f"💡 총 {len(risk_summary_data)}개 리스크 항목")
+                
+                # 상세 내용 (expander로 표시)
+                st.markdown("#### 📋 리스크 상세 대응 계획")
+                for i, risk in enumerate(risks, 1):
+                    if isinstance(risk, dict):
+                        risk_id = risk.get('id', f'R{i}')
+                        risk_name = risk.get('risk', '리스크 항목')[:50]
+                        
+                        with st.expander(f"[{risk_id}] {risk_name}...", expanded=False):
+                            st.markdown(f"**🔍 리스크 전문:** {risk.get('risk', 'N/A')}")
+                            st.markdown(f"**🛡️ Plan A (예방):** {risk.get('mitigation', 'N/A')}")
+                            
+                            plan_b = risk.get('plan_b', '')
+                            if plan_b:
+                                st.markdown(f"**🔄 Plan B (대안):** {plan_b}")
+                            
+                            trigger = risk.get('trigger_condition', '')
+                            if trigger:
+                                st.markdown(f"**⚡ 발동 조건:** {trigger}")
         else:
             st.info("리스크 데이터가 없습니다.")
         
@@ -1494,42 +1517,60 @@ def render_strategy_detail_page():
         kpis = strategy_data.get('kpis', [])
         
         if kpis:
+            # KPI를 테이블 형식으로 표시
+            import pandas as pd
+            
+            kpi_table_data = []
             for i, kpi in enumerate(kpis, 1):
                 if isinstance(kpi, dict):
-                    st.markdown(f"### {i}. {kpi.get('name', 'KPI 항목')}")
-                    
-                    # Before-After 명확화 (3️⃣ 개선)
-                    baseline = kpi.get('baseline', 'N/A')
-                    target = kpi.get('target', 'N/A')
-                    
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.markdown(f"**📉 현재 (Baseline):**")
-                        st.info(baseline)
-                    with col2:
-                        st.markdown(f"**📈 목표 (Target):**")
-                        st.success(target)
-                    
-                    # 측정 방법
-                    measurement_method = kpi.get('measurement_method', '')
-                    if measurement_method:
-                        st.markdown(f"**📏 측정 방법:** {measurement_method}")
-                    
-                    # 관리 주체 및 측정 주기
-                    owner = kpi.get('owner', '')
-                    frequency = kpi.get('measurement_frequency', '')
-                    if owner or frequency:
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            if owner:
-                                st.markdown(f"**👤 관리 주체:** {owner}")
-                        with col2:
-                            if frequency:
-                                st.markdown(f"**📅 측정 주기:** {frequency}")
-                    
-                    st.markdown("---")
+                    kpi_table_data.append({
+                        "No.": i,
+                        "카테고리": kpi.get('category', '-'),
+                        "KPI명": kpi.get('name', 'KPI 항목'),
+                        "현재값 (Baseline)": kpi.get('baseline', 'N/A'),
+                        "목표값 (Target)": kpi.get('target', 'N/A'),
+                        "측정 방법": kpi.get('measurement_method', '-')
+                    })
                 else:
-                    st.markdown(f"{i}. {kpi}")
+                    kpi_table_data.append({
+                        "No.": i,
+                        "카테고리": "-",
+                        "KPI명": str(kpi),
+                        "현재값 (Baseline)": "-",
+                        "목표값 (Target)": "-",
+                        "측정 방법": "-"
+                    })
+            
+            if kpi_table_data:
+                df = pd.DataFrame(kpi_table_data)
+                
+                # 스타일링을 위한 함수 정의
+                def highlight_improvement(row):
+                    """목표값에서 개선률 추출하여 하이라이트"""
+                    target = str(row['목표값 (Target)'])
+                    if '향상' in target or '개선' in target or '증가' in target or '↑' in target:
+                        return ['background-color: #e8f5e9'] * len(row)  # 연한 초록
+                    elif '감소' in target or '절감' in target or '단축' in target or '↓' in target:
+                        return ['background-color: #e3f2fd'] * len(row)  # 연한 파랑
+                    else:
+                        return [''] * len(row)
+                
+                # 테이블 표시 (스타일 적용)
+                st.dataframe(
+                    df,
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={
+                        "No.": st.column_config.NumberColumn("No.", width="small"),
+                        "카테고리": st.column_config.TextColumn("카테고리", width="small"),
+                        "KPI명": st.column_config.TextColumn("KPI명", width="medium"),
+                        "현재값 (Baseline)": st.column_config.TextColumn("📉 현재값", width="medium"),
+                        "목표값 (Target)": st.column_config.TextColumn("📈 목표값", width="medium"),
+                        "측정 방법": st.column_config.TextColumn("📏 측정 방법", width="large")
+                    }
+                )
+                
+                st.caption(f"💡 총 {len(kpi_table_data)}개 KPI 지표")
         else:
             st.info("KPI 데이터가 없습니다.")
     
