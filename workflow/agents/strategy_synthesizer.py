@@ -149,15 +149,270 @@ def _format_competitors_for_prompt(competitor_profiles: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _generate_risks_and_kpis_with_ai(norm_requirements: List[Requirement]) -> Dict[str, Any]:
+    """
+    SK AX 표준 리스크/KPI 템플릿 기반 + AI 세부 생성 (절충형)
+    
+    고정형 템플릿을 제공하고 LLM이 요구사항에 맞게 채우도록 함.
+    실패 시 빈 템플릿 반환 (fallback).
+    """
+    # 1️⃣ 리스크 & KPI 기본 구조 (형태 고정)
+    risk_template = [
+        {"id": "R1", "category": "AI/기술 성능", "risk": "", "likelihood": "", "impact": "", "mitigation": "", "plan_b": "", "trigger_condition": "", "mitigation_action_ids": [], "related_kpis": ["K1", "K2"]},
+        {"id": "R2", "category": "일정/리소스", "risk": "", "likelihood": "", "impact": "", "mitigation": "", "plan_b": "", "trigger_condition": "", "mitigation_action_ids": [], "related_kpis": ["K3", "K4"]},
+        {"id": "R3", "category": "인력/파트너", "risk": "", "likelihood": "", "impact": "", "mitigation": "", "plan_b": "", "trigger_condition": "", "mitigation_action_ids": [], "related_kpis": ["K5", "K6"]},
+        {"id": "R4", "category": "비용/TCO", "risk": "", "likelihood": "", "impact": "", "mitigation": "", "plan_b": "", "trigger_condition": "", "mitigation_action_ids": [], "related_kpis": ["K7", "K8"]},
+        {"id": "R5", "category": "요구사항 변경", "risk": "", "likelihood": "", "impact": "", "mitigation": "", "plan_b": "", "trigger_condition": "", "mitigation_action_ids": [], "related_kpis": ["K9", "K10"]}
+    ]
+
+    kpi_template = [
+        {"id": "K1", "category": "AI/기술", "name": "AI 모델 정확도", "baseline": "", "target": "", "measurement_method": "", "related_actions": [], "related_risks": ["R1"]},
+        {"id": "K2", "category": "AI/기술", "name": "PoC 성공률", "baseline": "", "target": "", "measurement_method": "", "related_actions": [], "related_risks": ["R1"]},
+        {"id": "K3", "category": "일정", "name": "프로젝트 일정 준수율", "baseline": "", "target": "", "measurement_method": "", "related_actions": [], "related_risks": ["R2"]},
+        {"id": "K4", "category": "일정", "name": "마일스톤 달성률", "baseline": "", "target": "", "measurement_method": "", "related_actions": [], "related_risks": ["R2"]},
+        {"id": "K5", "category": "인력", "name": "핵심 인력 안정성", "baseline": "", "target": "", "measurement_method": "", "related_actions": [], "related_risks": ["R3"]},
+        {"id": "K6", "category": "파트너", "name": "협업 파트너 일정 준수율", "baseline": "", "target": "", "measurement_method": "", "related_actions": [], "related_risks": ["R3"]},
+        {"id": "K7", "category": "비용", "name": "TCO 절감률", "baseline": "", "target": "", "measurement_method": "", "related_actions": [], "related_risks": ["R4"]},
+        {"id": "K8", "category": "비용", "name": "ROI 회수 기간", "baseline": "", "target": "", "measurement_method": "", "related_actions": [], "related_risks": ["R4"]},
+        {"id": "K9", "category": "변경관리", "name": "요구사항 변경 대응 속도", "baseline": "", "target": "", "measurement_method": "", "related_actions": [], "related_risks": ["R5"]},
+        {"id": "K10", "category": "경쟁력", "name": "제안 경쟁력 지수", "baseline": "", "target": "", "measurement_method": "", "related_actions": [], "related_risks": ["R1", "R4"]}
+    ]
+
+    # 2️⃣ LLM 프롬프트 구성 (요구사항을 기반으로 리스크 & KPI 생성)
+    req_text = "\n".join([f"- [{r.category}] {r.text}" for r in norm_requirements[:15]])
+    
+    prompt = f"""
+너는 SK AX의 제안 전략 컨설턴트다.
+다음 RFP 요구사항을 기반으로 아래 리스크 템플릿과 KPI 템플릿을 구체적으로 채워라.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📌 RFP 요구사항:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{req_text}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 리스크 템플릿 (이것을 채워서 반환):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{json.dumps(risk_template, ensure_ascii=False, indent=2)}
+
+⚠️ 작성 지침:
+- 각 카테고리별로 요구사항에서 실제 리스크를 구체적으로 작성
+- likelihood/impact: high|medium|low 중 선택
+- mitigation: "Plan A (예방): 1) ... → 2) ... → 3) ... → 4) ... → 5) ..." 형식으로 5단계
+- plan_b: "Plan B (대안): 1) ... → 2) ... → 3) ... → 4) ... → 5) ..." 형식으로 5단계
+- trigger_condition: 명확한 수치/시점 (예: "PoC Week 4 성공률 70% 미만")
+- mitigation_action_ids: 관련 액션 ID 배열 (예: ["A1", "A2"])
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 KPI 템플릿 (이것을 채워서 반환):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{json.dumps(kpi_template, ensure_ascii=False, indent=2)}
+
+⚠️ 작성 지침:
+- name: 요구사항에 맞는 구체적 KPI명
+- baseline: 현재값 + 경쟁사 비교 (예: "현재 85%, 경쟁사 평균 88%")
+- target: 목표값 + 개선률 + 시점 (예: "≥90% (5%p 향상, 2025년 12월)")
+- measurement_method: 구체적 측정 도구/방법 (예: "Precision/Recall/F1-Score 평균")
+- related_actions: 관련 액션 ID 배열 (예: ["A1", "A3"])
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+출력 형식:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{{
+  "risks": [위 리스크 템플릿 5개 모두 채워서],
+  "kpis": [위 KPI 템플릿 10개 모두 채워서]
+}}
+
+지금 즉시 위 형식의 JSON만 생성하라!
+"""
+
+    # 3️⃣ LLM 호출
+    try:
+        if is_llm_available():
+            print("  [리스크/KPI] 🔥 AI 생성 중...")
+            response = call_llm(prompt, temperature=0.5, max_tokens=6000)
+            
+            if response:
+                data = parse_json_response(response)
+                if isinstance(data, dict) and "risks" in data and "kpis" in data:
+                    risks = data.get("risks", [])
+                    kpis = data.get("kpis", [])
+                    print(f"  [리스크/KPI] ✅ AI 생성 완료 - 리스크 {len(risks)}개, KPI {len(kpis)}개")
+                    return data
+                else:
+                    print("  [리스크/KPI] ⚠️ JSON 형식 불일치")
+            else:
+                print("  [리스크/KPI] ⚠️ LLM 응답 없음")
+    except Exception as e:
+        print(f"  [리스크/KPI] ⚠️ LLM 호출 실패: {e}")
+
+    # 4️⃣ LLM 실패 시 — 기본 템플릿 반환 (fallback)
+    print("  [리스크/KPI] 📝 폴백 모드: 빈 템플릿 반환")
+    return {"risks": risk_template, "kpis": kpi_template}
+
+
 def _build_v3_1_prompt(
     norm_requirements: List[Requirement],
     internal_matches: List[Dict[str, Any]],
     competitor_profiles: Dict[str, Any]
 ) -> str:
-    """컨설턴트 수준 전략을 유도하는 시스템 프롬프트 생성 (fit_level/expected_timeline 반영)."""
+    """컨설턴트 수준 전략을 유도하는 시스템 프롬프트 생성 (고정형 템플릿 방식)."""
     req_summary = "\n".join([f"- [{r.category}] {r.text}" for r in norm_requirements[:12]])
     internal_summary = _format_internal_for_prompt(internal_matches)
     competitor_summary = _format_competitors_for_prompt(competitor_profiles)
+    
+    # 🆕 고정형 리스크 템플릿 (카테고리별)
+    risk_template = [
+        {
+            "id": "R1",
+            "category": "AI/기술 성능",
+            "risk": "[요구사항에서 AI/ML/기술 관련 리스크를 구체적으로 작성]",
+            "likelihood": "high|medium|low",
+            "impact": "high|medium|low",
+            "mitigation": "Plan A (예방): 구체적 5단계 예방 조치",
+            "plan_b": "Plan B (대안): 리스크 발생 시 구체적 대안 5단계",
+            "trigger_condition": "Plan B 발동 조건 (구체적 수치/시점)",
+            "mitigation_action_ids": ["A1"]
+        },
+        {
+            "id": "R2",
+            "category": "일정/리소스",
+            "risk": "[프로젝트 일정/인력 관련 리스크를 구체적으로 작성]",
+            "likelihood": "high|medium|low",
+            "impact": "high|medium|low",
+            "mitigation": "Plan A (예방): 구체적 5단계 예방 조치",
+            "plan_b": "Plan B (대안): 리스크 발생 시 구체적 대안 5단계",
+            "trigger_condition": "Plan B 발동 조건",
+            "mitigation_action_ids": ["A2"]
+        },
+        {
+            "id": "R3",
+            "category": "보안/컴플라이언스",
+            "risk": "[보안 인증/규제 관련 리스크를 구체적으로 작성]",
+            "likelihood": "high|medium|low",
+            "impact": "high|medium|low",
+            "mitigation": "Plan A (예방): 구체적 5단계 예방 조치",
+            "plan_b": "Plan B (대안): 리스크 발생 시 구체적 대안 5단계",
+            "trigger_condition": "Plan B 발동 조건",
+            "mitigation_action_ids": ["A3"]
+        },
+        {
+            "id": "R4",
+            "category": "통합/호환성",
+            "risk": "[시스템 통합/레거시 연동 관련 리스크를 구체적으로 작성]",
+            "likelihood": "high|medium|low",
+            "impact": "high|medium|low",
+            "mitigation": "Plan A (예방): 구체적 5단계 예방 조치",
+            "plan_b": "Plan B (대안): 리스크 발생 시 구체적 대안 5단계",
+            "trigger_condition": "Plan B 발동 조건",
+            "mitigation_action_ids": ["A4"]
+        },
+        {
+            "id": "R5",
+            "category": "비용/예산",
+            "risk": "[예산 초과/비용 관련 리스크를 구체적으로 작성]",
+            "likelihood": "high|medium|low",
+            "impact": "high|medium|low",
+            "mitigation": "Plan A (예방): 구체적 5단계 예방 조치",
+            "plan_b": "Plan B (대안): 리스크 발생 시 구체적 대안 5단계",
+            "trigger_condition": "Plan B 발동 조건",
+            "mitigation_action_ids": ["A5"]
+        }
+    ]
+    
+    # 🆕 고정형 KPI 템플릿 (카테고리별)
+    kpi_template = [
+        {
+            "id": "K1",
+            "category": "시스템 성능",
+            "name": "[요구사항 기반 성능 KPI명]",
+            "target": "[목표값 (%, 개선률, 시점)]",
+            "baseline": "[현재값, 경쟁사 비교]",
+            "measurement_method": "[측정 도구/방법]",
+            "related_actions": ["A1"]
+        },
+        {
+            "id": "K2",
+            "category": "처리량/용량",
+            "name": "[요구사항 기반 처리량 KPI명]",
+            "target": "[목표값]",
+            "baseline": "[현재값, 경쟁사 비교]",
+            "measurement_method": "[측정 도구/방법]",
+            "related_actions": ["A2"]
+        },
+        {
+            "id": "K3",
+            "category": "응답시간/지연",
+            "name": "[요구사항 기반 응답시간 KPI명]",
+            "target": "[목표값]",
+            "baseline": "[현재값, 경쟁사 비교]",
+            "measurement_method": "[측정 도구/방법]",
+            "related_actions": ["A3"]
+        },
+        {
+            "id": "K4",
+            "category": "정확도/품질",
+            "name": "[요구사항 기반 정확도 KPI명]",
+            "target": "[목표값]",
+            "baseline": "[현재값, 경쟁사 비교]",
+            "measurement_method": "[측정 도구/방법]",
+            "related_actions": ["A4"]
+        },
+        {
+            "id": "K5",
+            "category": "가용성/안정성",
+            "name": "[요구사항 기반 가용성 KPI명]",
+            "target": "[목표값]",
+            "baseline": "[현재값, 경쟁사 비교]",
+            "measurement_method": "[측정 도구/방법]",
+            "related_actions": ["A5"]
+        },
+        {
+            "id": "K6",
+            "category": "보안/컴플라이언스",
+            "name": "[요구사항 기반 보안 KPI명]",
+            "target": "[목표값]",
+            "baseline": "[현재값]",
+            "measurement_method": "[인증/감사 기준]",
+            "related_actions": ["A6"]
+        },
+        {
+            "id": "K7",
+            "category": "사용자 만족도",
+            "name": "[요구사항 기반 UX KPI명]",
+            "target": "[목표값]",
+            "baseline": "[현재값]",
+            "measurement_method": "[설문/피드백 방법]",
+            "related_actions": ["A7"]
+        },
+        {
+            "id": "K8",
+            "category": "비용 효율성",
+            "name": "[요구사항 기반 비용 KPI명]",
+            "target": "[목표값]",
+            "baseline": "[현재값, 경쟁사 비교]",
+            "measurement_method": "[TCO 계산 방식]",
+            "related_actions": ["A8"]
+        },
+        {
+            "id": "K9",
+            "category": "개발 생산성",
+            "name": "[요구사항 기반 생산성 KPI명]",
+            "target": "[목표값]",
+            "baseline": "[현재값]",
+            "measurement_method": "[측정 도구/방법]",
+            "related_actions": ["A9"]
+        },
+        {
+            "id": "K10",
+            "category": "확장성/유지보수",
+            "name": "[요구사항 기반 확장성 KPI명]",
+            "target": "[목표값]",
+            "baseline": "[현재값]",
+            "measurement_method": "[측정 기준]",
+            "related_actions": ["A10"]
+        }
+    ]
 
     # LLM 출력 스키마 힌트(최소 구조)
     schema_hint = {
@@ -210,27 +465,6 @@ def _build_v3_1_prompt(
                 "related_actions": ["A5", "A6"]
             }
         },
-        "risks": [
-            {
-                "id": "R1",
-                "risk": "AI 모델 성능 목표 미달 (정확도 85% 미만) 발생 시 기술 평가 20점 감점 + 제안 탈락 가능성 60%",
-                "likelihood": "medium",
-                "impact": "high",
-                "mitigation": "Plan A (예방): 1) 사전 벤치마크 테스트 3종 (Week -2) → 2) 성능 목표 90%로 상향 → 3) 주간 성능 모니터링 → 4) 중간 점검 2회 (Week 2, 4) → 5) 튜닝 전담팀 2명 배치",
-                "plan_b": "Plan B (대안): AI 성능 미달 시 → 1) 규칙 기반 로직 하이브리드 구성으로 정확도 80% 보장 → 2) AI 범위 70%로 축소, 나머지 30% 수동 처리 → 3) 6개월 내 단계적 AI 비율 확대 → 4) 추가 비용 10% 이내 → 5) 일정 영향 1주 이내",
-                "trigger_condition": "PoC Week 4 중간 점검 시 성공률 70% 미만인 경우 Plan B 발동",
-                "mitigation_action_ids": ["A1"]
-            }
-        ],
-        "kpis": [
-            {
-                "name": "시스템 처리 성능 (TPS)",
-                "target": "2,600 TPS (30% 개선, 2025년 12월, 최대 부하 테스트 기준)",
-                "baseline": "현재 2,000 TPS (부하 테스트 기준), 경쟁사 평균 2,200 TPS",
-                "measurement_method": "Apache JMeter 부하 테스트, 동시 사용자 1,000명 기준",
-                "related_actions": ["A1", "A3"]
-            }
-        ],
         "differentiation": ["차별화 포인트 1", "차별화 포인트 2", "차별화 포인트 3"],
         "appendix": {
             "requirement_groups": [{"category": "기술", "items": ["요구사항1", "요구사항2"]}],
@@ -251,17 +485,14 @@ def _build_v3_1_prompt(
     }
 
     prompt = f"""
-🎯 최적 전략 생성 가이드:
+🎯 전략 생성 가이드:
 
-다음은 고품질 전략을 위한 권장 개수입니다:
+📌 필수 요구사항:
+1. appendix.competitor_counters: 6개 이상 (각 경쟁사당 2개씩)
+2. prioritized_actions: 8~10개
+3. differentiation: 8~10개
 
-1. appendix.competitor_counters 배열: 6개 이상 권장 (각 경쟁사당 2개씩)
-2. prioritized_actions 배열: 8~10개 권장
-3. kpis 배열: 8~12개 권장
-4. risks 배열: 5개 이상 권장
-5. differentiation 배열: 8~10개 권장
-
-✨ 가능한 한 위 개수를 충족하여 상세하고 실행 가능한 전략을 제공하세요!
+💡 Note: 리스크와 KPI는 별도로 생성되므로 이 프롬프트에서는 제외
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -274,7 +505,7 @@ def _build_v3_1_prompt(
 - 모든 수치에는 구체적인 검증 근거 필수 (PoC 결과, 벤치마크, 실측 데이터)
 - 경쟁사별 고유 기술/제품명을 위에 제공된 SWOT 데이터에서 추출하여 명시
 - 모든 차별화 포인트에 정량적 수치와 측정 방법 포함
-- 반드시 위 절대적 필수 조건(6개, 10개, 12개, 5개, 10개)을 충족해야 함
+- appendix.competitor_counters 6개 이상, prioritized_actions 8~10개, differentiation 8~10개
 
 [요구사항(카테고리 태깅)]
 {req_summary}
@@ -291,14 +522,12 @@ def _build_v3_1_prompt(
 3) 경쟁사 강점에는 Counter 전략, 약점은 차별화 전략으로 연결하세요.
 4) 액션은 Impact × Urgency × Effort 기준으로 우선순위를 정렬하세요.
 5) 로드맵은 Pre-Bid → PoC → Proposal 3단계로 작성하세요.
-6) 리스크 관리와 KPI를 정의하세요.
 
 📋 작성 가이드:
 - 경쟁사 대응: 각 경쟁사별 강점 대응 + 약점 활용 (구체적 제품명, 정량 수치, 검증 근거)
 - 액션: Impact/Urgency/Effort 기준 우선순위, why/how/expected_result 상세 작성
-- KPI: baseline → target (측정 방법, 경쟁사 비교)
-- 리스크: Plan A (예방) + Plan B (대안) + trigger_condition
 - 로드맵: duration, objective, why, key_deliverables, expected_outcome (전략 수준)
+- 차별화: 구체적 수치와 경쟁사 비교 포함
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 💡 경쟁사 대응 전략 형식:
@@ -315,6 +544,8 @@ def _build_v3_1_prompt(
 
 ※ 반환은 아래 JSON 스키마 **그대로**만 출력(설명 금지):
 {json.dumps(schema_hint, ensure_ascii=False)}
+
+⚠️ 중요: "risks"와 "kpis" 필드는 절대 포함하지 마세요! (별도로 생성됨)
 """
     return prompt
 
@@ -512,6 +743,11 @@ def strategy_synthesizer(
     # 1) 요구사항 정규화/카테고리 태깅
     norm_requirements = _normalize_requirements(requirements)
 
+    # 1.5) 리스크 & KPI 별도 생성 (고정형 템플릿 방식)
+    risks_and_kpis = _generate_risks_and_kpis_with_ai(norm_requirements)
+    generated_risks = risks_and_kpis.get("risks", [])
+    generated_kpis = risks_and_kpis.get("kpis", [])
+
     # 2) 프롬프트 생성
     prompt = _build_v3_1_prompt(norm_requirements, internal_matches, competitor_profiles)
 
@@ -525,11 +761,19 @@ def strategy_synthesizer(
             if result_text:
                 strategy_data = parse_json_response(result_text)
                 if isinstance(strategy_data, dict):
-                    # 응답 품질 검증
+                    # 응답 품질 검증 (risks/kpis는 별도 생성되므로 제외)
                     competitor_counters = strategy_data.get('appendix', {}).get('competitor_counters', [])
                     actions = strategy_data.get('prioritized_actions', [])
                     
                     print(f"[전략 합성 v3.1] 경쟁사 대응 개수: {len(competitor_counters)}, 액션 개수: {len(actions)}")
+                    
+                    # LLM이 risks/kpis를 생성했다면 제거 (덮어쓰기 방지)
+                    if "risks" in strategy_data:
+                        print(f"[전략 합성 v3.1] ⚠️ LLM이 risks 필드를 생성함 → 제거 (별도 생성본 사용)")
+                        del strategy_data["risks"]
+                    if "kpis" in strategy_data:
+                        print(f"[전략 합성 v3.1] ⚠️ LLM이 kpis 필드를 생성함 → 제거 (별도 생성본 사용)")
+                        del strategy_data["kpis"]
                     
                     # 간단한 응답이면 재시도 (매우 완화된 기준: 1개 이상, 3개 이상)
                     # 실제로는 대부분의 응답이 이보다 많이 생성되므로 기본적으로 통과
@@ -562,9 +806,9 @@ def strategy_synthesizer(
    → 각각 why, how, strategy_approach, expected_result 모두 포함
    → 구체적이고 실행 가능한 액션 위주
 
-3️⃣ kpis: 8~12개 권장 (기술/보안/운영 등 다양한 영역 포함)
-4️⃣ risks: 5개 이상 권장 (Plan A, Plan B 모두 포함)
-5️⃣ differentiation: 8~10개 권장 (정량적 수치 포함)
+3️⃣ differentiation: 8~10개 권장 (정량적 수치 포함)
+
+💡 Note: risks와 kpis는 별도 생성되므로 생성하지 마세요!
 
 ✨ 더 풍부하고 실행 가능한 전략을 제공하세요!
 
@@ -586,12 +830,34 @@ def strategy_synthesizer(
                                 if len(retry_counters) >= 1 and len(retry_actions) >= 3:
                                     print("[전략 합성 v3.1] ✅ 재시도 성공: 상세 응답 확보")
                                     strategy_data = strategy_data_retry
+                                    
+                                    # LLM이 risks/kpis를 생성했다면 제거
+                                    if "risks" in strategy_data:
+                                        del strategy_data["risks"]
+                                    if "kpis" in strategy_data:
+                                        del strategy_data["kpis"]
+                                    
+                                    # 리스크/KPI 병합 (재시도 버전)
+                                    if generated_risks:
+                                        strategy_data["risks"] = generated_risks
+                                    if generated_kpis:
+                                        strategy_data["kpis"] = generated_kpis
                                 else:
                                     print("[전략 합성 v3.1] ⚠️ 재시도 실패: 여전히 간단함")
                                     # 재시도 실패해도 원래 데이터가 있으면 그것을 사용
                                     if len(competitor_counters) > 0 or len(actions) > 0:
                                         print("[전략 합성 v3.1] 📝 최초 응답 데이터라도 사용")
                                         # strategy_data를 그대로 사용 (이미 설정됨)
+                                        
+                                        # 최초 응답에도 리스크/KPI 병합
+                                        if "risks" in strategy_data:
+                                            del strategy_data["risks"]
+                                        if "kpis" in strategy_data:
+                                            del strategy_data["kpis"]
+                                        if generated_risks:
+                                            strategy_data["risks"] = generated_risks
+                                        if generated_kpis:
+                                            strategy_data["kpis"] = generated_kpis
                                     else:
                                         print("[전략 합성 v3.1] ⚠️ 데이터 부족 → 폴백 사용")
                                         fb = _fallback_strategy(norm_requirements, internal_matches, competitor_profiles)
@@ -601,6 +867,14 @@ def strategy_synthesizer(
                                             "status": "error",
                                             "message": "❌ AI 응답이 불충분하여 전략을 생성하지 못했습니다. AI 모델이 정상적으로 작동하지 않았거나 응답 품질이 기준에 미달했습니다. (경쟁사 대응 1개 이상, 액션 3개 이상 필요)"
                                         }
+                    
+                    # 🆕 리스크/KPI 병합
+                    if generated_risks:
+                        strategy_data["risks"] = generated_risks
+                        print(f"[전략 합성 v3.1] ✅ 리스크 {len(generated_risks)}개 병합됨")
+                    if generated_kpis:
+                        strategy_data["kpis"] = generated_kpis
+                        print(f"[전략 합성 v3.1] ✅ KPI {len(generated_kpis)}개 병합됨")
                     
                     print("[전략 합성 v3.1] ✅ AI 분석 완료")
                     deal_brief = _generate_deal_brief(strategy_data)
@@ -620,6 +894,14 @@ def strategy_synthesizer(
         print("[전략 합성 v3.1] 폴백 전략 사용 (상세 모드)")
         fb = _fallback_strategy(norm_requirements, internal_matches, competitor_profiles)
         
+        # 폴백에도 별도 생성된 리스크/KPI 병합
+        if generated_risks:
+            fb["risks"] = generated_risks
+            print(f"[전략 합성 v3.1] ✅ 폴백에 리스크 {len(generated_risks)}개 병합")
+        if generated_kpis:
+            fb["kpis"] = generated_kpis
+            print(f"[전략 합성 v3.1] ✅ 폴백에 KPI {len(generated_kpis)}개 병합")
+        
         # LLM 미가용 이유 판단
         if not is_llm_available():
             error_msg = "❌ AI 모델에 연결할 수 없습니다. API 키 설정을 확인하거나 네트워크 연결 상태를 점검해주세요."
@@ -638,6 +920,15 @@ def strategy_synthesizer(
     except Exception as e:
         print(f"[전략 합성 v3.1] ❌ 예외 발생: {e}")
         fb = _fallback_strategy(norm_requirements, internal_matches, competitor_profiles)
+        
+        # 예외 케이스에도 리스크/KPI 병합
+        if generated_risks:
+            fb["risks"] = generated_risks
+            print(f"[전략 합성 v3.1] ✅ 예외 케이스에 리스크 {len(generated_risks)}개 병합")
+        if generated_kpis:
+            fb["kpis"] = generated_kpis
+            print(f"[전략 합성 v3.1] ✅ 예외 케이스에 KPI {len(generated_kpis)}개 병합")
+        
         return {
             "strategy": fb, 
             "deal_brief": _generate_deal_brief(fb),
