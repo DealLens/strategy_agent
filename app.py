@@ -1167,19 +1167,19 @@ def render_strategy_detail_page():
         fit_table = appendix.get('fit_table', [])
         
         if fit_table:
-            # 갭 원인별로 그룹화
+            # 적합도 차이 원인별로 그룹화
             from collections import defaultdict
             gap_groups = defaultdict(list)
             
             for fit_row in fit_table:
                 gap_cause = fit_row.get('gap_root_cause', '기타')
-                # 같은 갭 원인을 가진 항목들을 그룹화
+                # 같은 적합도 차이 원인을 가진 항목들을 그룹화
                 gap_groups[gap_cause].append(fit_row)
             
             # 그룹별로 출력
             group_idx = 1
             for gap_cause, items in gap_groups.items():
-                # 첫 번째 항목의 정보 사용 (같은 갭이므로 동일한 영향/솔루션)
+                # 첫 번째 항목의 정보 사용 (같은 보완 필요 원인이므로 동일한 영향/솔루션)
                 first_item = items[0]
                 fit_level = first_item.get('fit_level', 'unknown').upper()
                 fit_color = {
@@ -1199,7 +1199,7 @@ def render_strategy_detail_page():
                 elif "내부 역량 부족" in gap_cause:
                     group_title = "내부 역량 보완 (파트너 협업)"
                 else:
-                    group_title = f"갭 그룹 {group_idx}"
+                    group_title = f"적합도 분석 그룹 {group_idx}"
                 
                 st.markdown(f"### {fit_color} {group_title}")
                 
@@ -1211,9 +1211,9 @@ def render_strategy_detail_page():
                 
                 st.markdown(f"**📊 적합도 수준:** {fit_level.replace('_', ' ').title()}")
                 
-                # 갭 원인 분석 (공통)
+                # 적합도 차이 원인 분석 (공통)
                 if gap_cause:
-                    st.markdown(f"**🔍 갭 원인:** {gap_cause}")
+                    st.markdown(f"**🔍 보완 필요 원인:** {gap_cause}")
                 
                 # 정량적 영향 (공통)
                 quantitative_impact = first_item.get('quantitative_impact', '')

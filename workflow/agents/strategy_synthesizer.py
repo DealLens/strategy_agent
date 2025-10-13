@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 컨설턴트 수준 전략 합성기 (Reporter 통합판 v3.1)
-- '갭(gap)' → '적합도(fit_level)'
-- 'due_hint' → 'expected_timeline'
+- 적합도 수준 분석 (fit_level: high_fit/partial_fit/low_fit/unknown)
+- 예상 일정 제시 (expected_timeline)
 - 각 액션에 why / how / strategy_approach 추가
 """
 
@@ -239,10 +239,10 @@ def _build_v3_1_prompt(
                     "id": "F1",
                     "requirement": "요구사항",
                     "fit_level": "high_fit|partial_fit|low_fit|unknown",
-                    "gap_root_cause": "기술 갭의 근본 원인 (예: Java 1.6 레거시 → 보안 취약점 CVE-2021-XXXX → 인증 심사 탈락 위험)",
+                    "gap_root_cause": "적합도 차이의 근본 원인 (예: Java 1.6 레거시 → 보안 취약점 CVE-2021-XXXX → 인증 심사 탈락 위험)",
                     "quantitative_impact": "정량적 영향 (예: 성능 저하율 20%, 보안 취약점 15개, 유지보수 비용 연 30% 증가)",
                     "qualitative_impact": "정성적 영향 (예: 최신 AI 모델 적용 불가, 개발자 확보 어려움)",
-                    "suggested_action": "갭 해결 로직 (예: Java 1.6→17 업그레이드 시 성능 25% 개선 + 보안 취약점 100% 해소. 단계: 호환성 분석 2주 → 마이그레이션 6주 → 검증 2주)",
+                    "suggested_action": "보완 방안 (예: Java 1.6→17 업그레이드 시 성능 25% 개선 + 보안 취약점 100% 해소. 단계: 호환성 분석 2주 → 마이그레이션 6주 → 검증 2주)",
                     "action_ids": ["A1", "A2"]
                 }
             ],
