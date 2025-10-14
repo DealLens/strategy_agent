@@ -92,6 +92,77 @@ def _shorten(text: str, max_len: int = 160) -> str:
     return (text[: max_len - 3] + "...") if len(text) > max_len else text
 
 
+def _clean_text(text: str) -> str:
+    """퍼센트 수치를 완전히 제거하고 구체적 수치로 대체하여 텍스트를 정리"""
+    if not text:
+        return ""
+    
+    # 퍼센트 수치를 구체적 수치로 대체하는 패턴들
+    replacements = {
+        # 성능 개선 관련 - 더 구체적인 표현으로 대체
+        r'\d+%\s*개선': '크게 개선',
+        r'\d+%\s*향상': '대폭 향상', 
+        r'\d+%\s*감소': '현저히 감소',
+        r'\d+%\s*절감': '대폭 절감',
+        r'\d+%\s*증가': '크게 증가',
+        r'\d+%\s*증대': '대폭 증대',
+        r'\d+%\s*단축': '대폭 단축',
+        r'\d+%\s*확보': '다수 확보',
+        r'\d+%\s*완화': '대폭 완화',
+        r'\d+%\s*높은': '매우 높은',
+        r'\d+%\s*낮은': '매우 낮은',
+        r'\d+%\s*달성': '성공적 달성',
+        r'\d+%\s*상승': '크게 상승',
+        r'\d+%\s*하락': '현저히 하락',
+        r'\d+%\s*확대': '대폭 확대',
+        r'\d+%\s*축소': '현저히 축소',
+        
+        # 화살표와 함께 나오는 패턴들
+        r'\d+%→\d+%': '대폭',
+        r'\d+%→\d+': '대폭',
+        r'\d+→\d+%': '대폭',
+        r'→\d+%': '→대폭',
+        
+        # 괄호 안의 퍼센트 수치들
+        r'\([^)]*\d+%[^)]*\)': '',  # (85%, 90% 등) 완전 제거
+        r'\([^)]*\d+\.\d+%[^)]*\)': '',  # (85.5% 등) 완전 제거
+        
+        # 단독 퍼센트 수치들 (문장 중간에 있는 경우)
+        r'\s*\d+%\s*': ' ',  # 공백과 함께 있는 퍼센트 제거
+        r'\d+%': '',  # 나머지 퍼센트 제거
+        r'\d+\.\d+%': '',  # 소수점 퍼센트 제거
+        
+        # 증빙 수치 관련 표현들
+        r'\([^)]*증빙[^)]*\)': '',
+        r'\([^)]*검증[^)]*\)': '',
+        r'\([^)]*벤치마크[^)]*\)': '',
+        r'\([^)]*실측[^)]*\)': '',
+        r'\([^)]*PoC[^)]*\)': '',
+        r'\([^)]*정량[^)]*\)': '',
+        r'\([^)]*개선률[^)]*\)': '',
+        r'\([^)]*향상[^)]*\)': '',
+        r'\([^)]*절감[^)]*\)': '',
+        r'\([^)]*증가[^)]*\)': '',
+        r'\([^)]*감소[^)]*\)': '',
+        r'\([^)]*정량 검증[^)]*\)': ''
+    }
+    
+    # 모든 퍼센트 관련 패턴을 정리
+    for pattern, replacement in replacements.items():
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    
+    # 연속된 공백과 줄바꿈 정리
+    text = re.sub(r'\s+', ' ', text)
+    text = re.sub(r'\n+', '\n', text)
+    
+    # 불필요한 쉼표와 문장 부호 정리
+    text = re.sub(r',\s*,', ',', text)  # 연속된 쉼표
+    text = re.sub(r'\s+,', ',', text)  # 쉼표 앞 공백 제거
+    text = re.sub(r',\s*$', '', text)  # 문장 끝 쉼표 제거
+    
+    return text.strip()
+
+
 def _score_to_fit_level(score: Optional[float]) -> str:
     """0~1 점수 → 적합도 등급(high_fit/partial_fit/low_fit/unknown)."""
     if score is None:
@@ -186,6 +257,13 @@ def _generate_risks_and_kpis_with_ai(norm_requirements: List[Requirement]) -> Di
 다음 RFP 요구사항을 기반으로 아래 리스크 템플릿과 KPI 템플릿을 구체적으로 채워라.
 
 ⚠️ 중요: 이모지(📋, ⚖️, 📝, 📰, 💪, ⚠️, 🔥, ⚡ 등) 사용 절대 금지! 비즈니스 문서이므로 순수 텍스트만 사용하세요.
+
+🚨 절대 금지: 수치, 퍼센트, 정량적 지표 사용 금지!
+- 40%, 30%, 25%, 15% 등 모든 퍼센트 수치 사용 금지
+- 100%, 95%, 20% 등 모든 정량적 수치 사용 금지  
+- "향상", "감소", "증가", "개선" 등의 단어와 함께 수치 사용 금지
+- 정성적 설명만 사용: "크게 향상", "대폭 감소", "상당한 개선", "현저한 개선", "매우 높은" 등
+- 구체적 수치 대신 정성적 표현 사용: "다수", "대폭", "크게", "현저히", "매우", "상당히" 등
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 RFP 요구사항:
@@ -436,7 +514,7 @@ def _build_v3_1_prompt(
                 "urgency": "high|medium|low",
                 "effort": "high|medium|low",
                 "expected_timeline": "예: 2025-Q4",
-                "expected_result": "정량적 기대효과 (예: 성능 25% 개선, 리스크 30% 감소)",
+                "expected_result": "정성적 기대효과 (예: 성능 크게 개선, 리스크 대폭 감소) - 수치, 퍼센트 사용 금지",
                 "related_fit_ids": ["F1", "F2"],
                 "related_risks": ["R1"]
             }
@@ -444,26 +522,26 @@ def _build_v3_1_prompt(
         "roadmap": {
             "phase_0_prebid": {
                 "duration": "4주 (Week 1~4)",
-                "objective": "제안 기반 확보 - 요구사항 100% 매핑 + 레퍼런스 5~7건 확보 + 파트너 협업 체계 구축",
-                "why": "초기 평가 통과율 85% 달성을 위해 기술 적합도 입증 및 신뢰도 확보 필요",
-                "key_deliverables": ["요구사항 매핑 완료", "레퍼런스 5~7건 확보", "보안 체크리스트 완료", "파트너 1~2곳 선정"],
-                "expected_outcome": "초기 평가 통과율 85% + 고객 신뢰도 40% 향상 + 기술 리스크 35% 감소",
+                "objective": "제안 기반 확보 - 요구사항 완전 매핑 + 레퍼런스 다수 확보 + 파트너 협업 체계 구축",
+                "why": "초기 평가 통과를 위해 기술 적합도 입증 및 신뢰도 확보 필요",
+                "key_deliverables": ["요구사항 매핑 완료", "레퍼런스 다수 확보", "보안 체크리스트 완료", "파트너 선정"],
+                "expected_outcome": "초기 평가 통과 + 고객 신뢰도 향상 + 기술 리스크 감소",
                 "related_actions": ["A1", "A2"]
             },
             "phase_1_poc": {
                 "duration": "8주 (Week 5~12)",
-                "objective": "기술 검증 및 실증 - PoC 성공률 90% 달성 + 성능 25% 개선 입증 + 레퍼런스 3건 확보",
-                "why": "성능 미입증 문제 해결이 제안 경쟁력 확보의 핵심. PoC 실패 시 제안 탈락 가능성 60%",
-                "key_deliverables": ["PoC 설계 완료", "실제 데이터 검증 수행", "성능 비교 분석", "신규 레퍼런스 3건"],
-                "expected_outcome": "PoC 성공률 90% + 성능 목표 110% 달성 + 기술 평가 65점 이상",
+                "objective": "기술 검증 및 실증 - PoC 성공률 달성 + 성능 개선 입증 + 레퍼런스 확보",
+                "why": "성능 미입증 문제 해결이 제안 경쟁력 확보의 핵심. PoC 실패 시 제안 탈락 위험",
+                "key_deliverables": ["PoC 설계 완료", "실제 데이터 검증 수행", "성능 비교 분석", "신규 레퍼런스 확보"],
+                "expected_outcome": "PoC 성공률 달성 + 성능 목표 달성 + 기술 평가 고득점",
                 "related_actions": ["A3", "A4"]
             },
             "phase_2_proposal": {
                 "duration": "3주 (Week 13~15)",
-                "objective": "제안서 완성 - 차별화 5가지 확립 + 평가 항목 100% 대응 + 경쟁력 35%→65% 향상",
-                "why": "PoC 결과를 제안서에 통합하여 경쟁사 대비 차별화 명확히 제시. 완성도 95% 이상 확보",
-                "key_deliverables": ["차별화 포인트 5가지", "TCO 분석 완료", "기술 제안서 작성", "리스크 대응 계획"],
-                "expected_outcome": "제안서 완성도 95% + 차별화 점수 85점 이상 + 수주 확률 35%→60%",
+                "objective": "제안서 완성 - 차별화 다수 확립 + 평가 항목 완전 대응 + 경쟁력 대폭 향상",
+                "why": "PoC 결과를 제안서에 통합하여 경쟁사 대비 차별화 명확히 제시. 완성도 높은 수준 확보",
+                "key_deliverables": ["차별화 포인트 다수", "TCO 분석 완료", "기술 제안서 작성", "리스크 대응 계획"],
+                "expected_outcome": "제안서 완성도 높은 수준 + 차별화 점수 고득점 + 수주 확률 대폭 향상",
                 "related_actions": ["A5", "A6"]
             }
         },
@@ -476,9 +554,9 @@ def _build_v3_1_prompt(
                     "requirement": "요구사항",
                     "fit_level": "high_fit|partial_fit|low_fit|unknown",
                     "gap_root_cause": "적합도 차이의 근본 원인 (예: Java 1.6 레거시 → 보안 취약점 CVE-2021-XXXX → 인증 심사 탈락 위험)",
-                    "quantitative_impact": "정량적 영향 (예: 성능 저하율 20%, 보안 취약점 15개, 유지보수 비용 연 30% 증가)",
+                    "quantitative_impact": "정량적 영향 (예: 성능 저하, 보안 취약점 다수, 유지보수 비용 증가)",
                     "qualitative_impact": "정성적 영향 (예: 최신 AI 모델 적용 불가, 개발자 확보 어려움)",
-                    "suggested_action": "보완 방안 (예: Java 1.6→17 업그레이드 시 성능 25% 개선 + 보안 취약점 100% 해소. 단계: 호환성 분석 2주 → 마이그레이션 6주 → 검증 2주)",
+                    "suggested_action": "보완 방안 (예: Java 1.6→17 업그레이드 시 성능 크게 개선 + 보안 취약점 완전 해소. 단계: 호환성 분석 → 마이그레이션 → 검증)",
                     "action_ids": ["A1", "A2"]
                 }
             ],
@@ -500,13 +578,19 @@ Note: 리스크와 KPI는 별도로 생성되므로 이 프롬프트에서는 �
 
 중요: 이것은 실제 수십억원 규모 제안서를 위한 전략 분석입니다. 추상적이거나 간단한 응답은 절대 불가합니다!
 
+🚨 절대 금지: 수치, 퍼센트, 정량적 지표 사용 금지!
+- 40%, 30%, 25%, 15% 등 모든 퍼센트 수치 사용 금지
+- 100%, 95%, 20% 등 모든 정량적 수치 사용 금지  
+- "향상", "감소", "증가", "개선" 등의 단어와 함께 수치 사용 금지
+- 정성적 설명만 사용: "크게 향상", "대폭 감소", "상당한 개선", "현저한 개선", "매우 높은" 등
+- 구체적 수치 대신 정성적 표현 사용: "다수", "대폭", "크게", "현저히", "매우", "상당히" 등
+
 당신은 대형 엔터프라이즈 제안의 시니어 전략 컨설턴트입니다.
 아래 정보를 바탕으로 **매우 구체적이고 실행 가능하며 차별화된 전략**을 JSON으로 작성하세요.
 
 필수 요구사항:
-- 모든 수치에는 구체적인 검증 근거 필수 (PoC 결과, 벤치마크, 실측 데이터)
 - 경쟁사별 고유 기술/제품명을 위에 제공된 SWOT 데이터에서 추출하여 명시
-- 모든 차별화 포인트에 정량적 수치와 측정 방법 포함
+- 모든 차별화 포인트는 정성적 설명으로만 작성 (수치, 퍼센트, 정량적 지표 사용 금지)
 - appendix.competitor_counters 6개 이상, prioritized_actions 8~10개, differentiation 8~10개
 
 [요구사항(카테고리 태깅)]
@@ -531,40 +615,51 @@ Note: 리스크와 KPI는 별도로 생성되므로 이 프롬프트에서는 �
 - 모든 액션과 차별화 포인트는 반드시 RFP의 실제 요구사항에서 도출되어야 합니다
 
 작성 가이드:
-- 경쟁사 대응: RFP 요구사항과 관련된 범위 내에서만 각 경쟁사별 강점 대응 + 약점 활용 (구체적 제품명, 정량 수치, 검증 근거)
-- 액션: RFP 요구사항에서 직접 도출된 실행 항목만 작성, Impact/Urgency/Effort 기준 우선순위, why/how/expected_result 상세 작성
+- 경쟁사 대응: RFP 요구사항과 관련된 범위 내에서만 각 경쟁사별 강점 대응 + 약점 활용 (구체적 제품명, 정성적 설명만 사용)
+- 액션: RFP 요구사항에서 직접 도출된 실행 항목만 작성, Impact/Urgency/Effort 기준 우선순위, why/how/expected_result 상세 작성 (수치 사용 금지)
 - 로드맵: RFP 수행과 직접 관련된 단계만 포함, duration, objective, why, key_deliverables, expected_outcome (전략 수준)
-- 차별화: RFP 요구사항 기반 차별화만 포함, 구체적 수치와 경쟁사 비교 포함
+- 차별화: RFP 요구사항 기반 차별화만 포함, 정성적 설명으로만 작성 (수치, 퍼센트 사용 금지)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 경쟁사 대응 전략 작성 가이드 (필수):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 위에 제공된 [주요 경쟁사 SWOT(요약)] 데이터를 반드시 정독하여:
 
-각 경쟁사당 최소 2개 작성 (강점 대응 1개 + 약점 활용 1개):
+각 경쟁사당 정확히 2개만 작성 (강점 대응 1개 + 약점 활용 1개):
+⚠️ 중요: 각 경쟁사마다 강점 대응 1개, 약점 활용 1개만 작성하세요. 중복 작성 금지!
+🚨 절대 금지: 같은 경쟁사의 강점이나 약점을 여러 번 중복 작성하지 마세요!
 
-1. 강점 대응 전략 (SWOT-S 기반):
-   형식: "[강점 대응] 경쟁사의 [SWOT에서 발견한 실제 강점] → 당사는 [구체적 대응 방안 + 정량 수치]"
-   
-   예시: "[강점 대응] 삼성SDS의 Brightics AI 플랫폼과 20년 축적된 금융권 레퍼런스 → SK AX는 생성형 AI 기반 자동화 솔루션으로 개발 생산성 40% 향상 및 AI 코드 리뷰 자동화를 통해 대응. 특히 금융 도메인 특화 AI 모델 3종 보유로 경쟁력 확보."
+각 경쟁사당 **정확히 1개의 문단만 작성**:
+1) 강점 대응: "[강점 대응]" 태그로 시작하는 문장 1개만 작성.
+2) 약점 활용: "[약점 활용]" 태그로 시작하는 문장 1개만 작성.
+⚠️ '강점 대응:' 과 같은 한글 라벨은 사용하지 말고 반드시 대괄호 표기만 사용.
 
-2. 약점 활용 전략 (SWOT-W 기반):
-   형식: "[약점 활용] 경쟁사의 [SWOT에서 발견한 실제 약점] → 당사는 [차별화 전략 + 정량 수치]"
-   
-   예시: "[약점 활용] LG CNS의 높은 초기 도입 비용 및 복잡한 라이선스 구조 → SK AX는 구독 기반 유연한 가격 정책(월 100만원부터)과 PoC 무료 제공으로 진입장벽 50% 낮춤. 클라우드 네이티브 아키텍처로 초기 투자 비용 70% 절감."
+예시 (수치 사용 금지):
+"[강점 대응] 삼성SDS의 Brightics AI 플랫폼과 장기간 축적된 금융권 레퍼런스 → SK AX는 생성형 AI 기반 자동화 솔루션으로 개발 생산성 크게 향상 및 AI 코드 리뷰 자동화를 통해 대응. 특히 금융 도메인 특화 AI 모델 다수 보유로 경쟁력 확보."
+
+"[약점 활용] LG CNS의 높은 초기 도입 비용 및 복잡한 라이선스 구조 → SK AX는 구독 기반 유연한 가격 정책과 PoC 무료 제공으로 진입장벽 크게 낮춤. 클라우드 네이티브 아키텍처로 초기 투자 비용 대폭 절감."
+
+❌ 잘못된 예시 (사용 금지):
+"생산성 40% 향상", "비용 30% 절감", "속도 25% 개선" 등 모든 수치 사용 금지
 
 필수 체크리스트:
 - 위 SWOT 데이터에서 **실제로 언급된 제품명, 서비스명, 기술명**을 반드시 포함하세요
-- 각 전략마다 **구체적인 정량 수치**(%, 개수, 금액 등) 포함 필수
+- 각 전략마다 **구체적인 개선 효과** 포함 필수 (수치, 퍼센트 사용 금지)
 - RFP 요구사항과 **직접 관련된** 내용만 작성
 - 경쟁사 산업(자동차, 금융 등)이 RFP와 무관하면 해당 부분 제외
 - 최소 100자 이상의 상세한 설명 작성
-- 각 경쟁사당 최소 2개(강점 1 + 약점 1) 작성
+- 각 경쟁사당 정확히 1개의 문단만 작성 (강점 대응 1개 + 약점 활용 1개)
+- 🚨 중복 금지: 같은 경쟁사의 같은 유형(강점/약점) 전략을 여러 번 작성하지 마세요!
+- 🚨 수치 금지: 퍼센트, 정량적 수치, 증빙 데이터 사용 절대 금지!
+- 🚨 라벨 금지: '강점 대응:', '약점 활용:' 같은 한글 라벨 사용 금지! 반드시 [강점 대응], [약점 활용] 대괄호 표기만 사용!
 
 출력 형식 규칙:
 - 이모지(💪, 🔥, ⚡, 등) 사용 절대 금지! 비즈니스 문서이므로 텍스트만 사용
 - 마크다운 서식 사용 금지 (**, ##, 등)
 - 순수 텍스트로만 작성
+- 각 경쟁사마다 정확히 1개의 문단만 작성 (강점 대응 1개 + 약점 활용 1개)
+- 형식: "■ [경쟁사명]\n[강점 대응] [내용]\n[약점 활용] [내용]"
+- 🚨 라벨 금지: '강점 대응:', '약점 활용:' 같은 한글 라벨 사용 금지! 반드시 [강점 대응], [약점 활용] 대괄호 표기만 사용!
 
 ※ 반환은 아래 JSON 스키마 **그대로**만 출력(설명 금지):
 {json.dumps(schema_hint, ensure_ascii=False)}
@@ -642,19 +737,24 @@ def _generate_deal_brief(strategy: Dict[str, Any]) -> str:
     diff = strategy.get("differentiation", [])
     risks = strategy.get("risks", [])
     kpis = strategy.get("kpis", [])
+    competitor_counters = strategy.get("appendix", {}).get("competitor_counters", [])
 
     def _bullet_actions(items: List[Dict[str, Any]], k: int = 5) -> List[str]:
         out = []
         for a in items[:k]:
             if not isinstance(a, dict):
                 continue
-            line = f"- {a.get('action', '')}"
+            # 액션 텍스트에서 수치 제거
+            action_text = _clean_text(a.get('action', ''))
+            line = f"- {action_text}"
             why = a.get("why")
             if why:
-                line += f"\n  └ 이유: {why}"
+                why_text = _clean_text(why)
+                line += f"\n  └ 이유: {why_text}"
             how = a.get("how")
             if how:
-                line += f"\n  └ 방법: {how}"
+                how_text = _clean_text(how)
+                line += f"\n  └ 방법: {how_text}"
             approach = a.get("strategy_approach")
             if approach:
                 line += f"\n  └ 접근유형: {approach}"
@@ -670,7 +770,8 @@ def _generate_deal_brief(strategy: Dict[str, Any]) -> str:
                 line += f"\n  └ 예상 일정: {tl}"
             exp = a.get("expected_result")
             if exp:
-                line += f"\n  └ 기대효과: {exp}"
+                exp_text = _clean_text(exp)
+                line += f"\n  └ 기대효과: {exp_text}"
             out.append(line)
         return out or ["- (항목 없음)"]
 
@@ -702,6 +803,91 @@ def _generate_deal_brief(strategy: Dict[str, Any]) -> str:
             out.append(line)
         return out or ["- (항목 없음)"]
 
+    def _competitor_analysis_lines(counters: List[Dict[str, Any]]) -> List[str]:
+        """경쟁사 분석을 강점과 약점으로 그룹화하여 출력"""
+        if not counters:
+            return ["- (경쟁사 분석 데이터 없음)"]
+        
+        # 다양한 라벨 형식을 처리하는 정규식 패턴
+        strength_patterns = [
+            r'\[강점 대응\]',
+            r'강점 대응:',
+            r'▶ 강점 대응:',
+            r'▶강점 대응:',
+            r'• 강점 대응:',
+            r'•강점 대응:',
+            r'- 강점 대응:',
+            r'-강점 대응:',
+            r'강점대응:',
+            r'강점 대응',
+        ]
+        
+        weakness_patterns = [
+            r'\[약점 활용\]',
+            r'약점 활용:',
+            r'▲ 약점 활용:',
+            r'▲약점 활용:',
+            r'• 약점 활용:',
+            r'•약점 활용:',
+            r'- 약점 활용:',
+            r'-약점 활용:',
+            r'약점활용:',
+            r'약점 활용',
+        ]
+        
+        def extract_content(text: str, patterns: List[str]) -> str:
+            """텍스트에서 라벨을 제거하고 내용만 추출"""
+            for pattern in patterns:
+                if re.search(pattern, text):
+                    # 라벨 제거
+                    clean_text = re.sub(pattern, '', text).strip()
+                    # 불필요한 기호와 증빙 수치 제거
+                    clean_text = _clean_text(clean_text)
+                    return clean_text
+            return ""
+        
+        # 경쟁사별로 그룹화
+        by_company = {}
+        for counter in counters:
+            if not isinstance(counter, dict):
+                continue
+            company = counter.get("company", "")
+            counter_text = counter.get("counter", "")
+            if company and counter_text:
+                if company not in by_company:
+                    by_company[company] = {"strengths": set(), "weaknesses": set()}
+                
+                # 강점 대응과 약점 활용 구분
+                strength_content = extract_content(counter_text, strength_patterns)
+                if strength_content:
+                    by_company[company]["strengths"].add(strength_content)
+                
+                weakness_content = extract_content(counter_text, weakness_patterns)
+                if weakness_content:
+                    by_company[company]["weaknesses"].add(weakness_content)
+        
+        out = []
+        for company, strategies in by_company.items():
+            # 강점이나 약점이 하나도 없으면 해당 기업 생략
+            if not strategies["strengths"] and not strategies["weaknesses"]:
+                continue
+                
+            out.append(f"■ {company}")
+            
+            # 강점 대응들이 있으면 출력 (라벨 없이)
+            if strategies["strengths"]:
+                for strength in sorted(strategies["strengths"]):  # 정렬하여 일관성 유지
+                    out.append(f"[강점 대응] {strength}")
+            
+            # 약점 활용들이 있으면 출력 (라벨 없이)
+            if strategies["weaknesses"]:
+                for weakness in sorted(strategies["weaknesses"]):  # 정렬하여 일관성 유지
+                    out.append(f"[약점 활용] {weakness}")
+            
+            out.append("")  # 경쟁사 간 구분을 위한 빈 줄
+        
+        return out if out else ["- (경쟁사 분석 데이터 없음)"]
+
     lines = [
         "# 전략 브리핑 (v3.1)",
         "",
@@ -713,10 +899,13 @@ def _generate_deal_brief(strategy: Dict[str, Any]) -> str:
         f"- **경쟁사**: {_shorten(focus.get('competitor','-'), 400)}",
         f"- **시장**: {_shorten(focus.get('market','-'), 400)}",
         "",
-        "## 3) 우선순위 액션 (Top 5)",
+        "## 3) 경쟁사 분석",
+        *(_competitor_analysis_lines(competitor_counters)),
+        "",
+        "## 4) 우선순위 액션 (Top 5)",
         *(_bullet_actions(actions, 5)),
         "",
-        "## 4) 로드맵",
+        "## 5) 로드맵",
         f"- **Pre-Bid ({roadmap.get('phase_0_prebid', {}).get('duration', '4주')})**: {roadmap.get('phase_0_prebid', {}).get('objective', '-')}",
         f"  └ {roadmap.get('phase_0_prebid', {}).get('expected_outcome', '-')}",
         f"- **PoC ({roadmap.get('phase_1_poc', {}).get('duration', '8주')})**: {roadmap.get('phase_1_poc', {}).get('objective', '-')}",
@@ -724,14 +913,14 @@ def _generate_deal_brief(strategy: Dict[str, Any]) -> str:
         f"- **Proposal ({roadmap.get('phase_2_proposal', {}).get('duration', '3주')})**: {roadmap.get('phase_2_proposal', {}).get('objective', '-')}",
         f"  └ {roadmap.get('phase_2_proposal', {}).get('expected_outcome', '-')}",
         "",
-        "## 5) 리스크 & 대응",
+        "## 6) 리스크 & 대응",
         *(_risk_lines(risks, 5)),
         "",
-        "## 6) 핵심 KPI",
+        "## 7) 핵심 KPI",
         *(_kpi_lines(kpis, 5)),
         "",
-        "## 7) 차별화 포인트",
-        *([f"- {x}" for x in diff[:5]] or ["- (항목 없음)"])
+        "## 8) 차별화 포인트",
+        *([f"- {_clean_text(x)}" for x in diff[:5]] or ["- (항목 없음)"])
     ]
     return "\n".join(lines)
 
@@ -815,31 +1004,45 @@ STOP! 이전 응답 거부됨!
 - prioritized_actions: {len(actions)}개 (권장: 8~10개)
 
 더 상세하고 실행 가능한 전략을 작성하세요:
+
+🚨 절대 금지: 수치, 퍼센트, 정량적 지표 사용 금지!
+- 40%, 30%, 25%, 15% 등 모든 퍼센트 수치 사용 금지
+- 100%, 95%, 20% 등 모든 정량적 수치 사용 금지  
+- "향상", "감소", "증가", "개선" 등의 단어와 함께 수치 사용 금지
+- 정성적 설명만 사용: "크게 향상", "대폭 감소", "상당한 개선", "현저한 개선", "매우 높은" 등
+- 구체적 수치 대신 정성적 표현 사용: "다수", "대폭", "크게", "현저히", "매우", "상당히" 등
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. competitor_counters: 각 경쟁사당 최소 2개 (강점 1 + 약점 1)
+1. competitor_counters: 각 경쟁사당 정확히 2개만 (강점 1 + 약점 1)
    
    필수 형식:
-   - 강점 대응: "[강점 대응] 경쟁사의 [SWOT-S에서 발견한 실제 강점 + 제품명] → 당사는 [구체적 대응 + 정량 수치]"
-   - 약점 활용: "[약점 활용] 경쟁사의 [SWOT-W에서 발견한 실제 약점] → 당사는 [차별화 전략 + 정량 수치]"
+   - 각 경쟁사당 정확히 1개의 문단만 작성 (강점 대응 1개 + 약점 활용 1개)
+   - 강점 대응: "[강점 대응] 경쟁사의 [SWOT-S에서 발견한 실제 강점 + 제품명] → 당사는 [구체적 대응 + 정성적 효과]"
+   - 약점 활용: "[약점 활용] 경쟁사의 [SWOT-W에서 발견한 실제 약점] → 당사는 [차별화 전략 + 정성적 효과]"
    
    필수 조건:
    - 위 SWOT 데이터에서 실제로 언급된 제품명, 서비스명, 기술명 포함
-   - 각 전략마다 구체적인 정량 수치(%, 개수, 금액 등) 필수
+   - 각 전략마다 구체적인 정성적 효과 설명 필수 (수치, 퍼센트 사용 금지)
    - 최소 100자 이상 상세 설명
    - RFP와 무관한 산업 분야는 제외
+   - 각 경쟁사마다 정확히 1개의 문단만 작성 (강점 대응 1개 + 약점 활용 1개)
+   - 🚨 라벨 금지: '강점 대응:', '약점 활용:' 같은 한글 라벨 사용 금지! 반드시 [강점 대응], [약점 활용] 대괄호 표기만 사용!
    
-   형식: {{"company": "경쟁사명", "counter": "[강점/약점 대응] 경쟁사의 XXX → 당사는 YYY (구체적 수치)"}}
+   형식: {{"company": "경쟁사명", "counter": "[강점 대응] [내용]\n[약점 활용] [내용]"}}
    ⚠️ 반드시 위 SWOT 데이터의 실제 내용을 분석하여 작성 (예시 복사 금지)
+   🚨 절대 금지: 같은 경쟁사의 강점이나 약점을 여러 번 중복 작성하지 마세요!
 
 2. prioritized_actions: RFP 요구사항에서 직접 도출된 액션만 8~10개 권장
    → A1부터 A8 이상 (A10까지 권장)
-   → 각각 why, how, strategy_approach, expected_result 모두 포함
+   → 각각 why, how, strategy_approach, expected_result 모두 포함 (수치, 퍼센트 사용 금지)
    → **RFP와 직접 관련된** 구체적이고 실행 가능한 액션 위주
    🚨 중요: RFP와 무관한 산업 분야의 액션은 절대 포함하지 마세요!
+   🚨 수치 금지: 퍼센트, 정량적 수치, 증빙 데이터 사용 절대 금지!
 
-3. differentiation: RFP 요구사항 기반으로만 8~10개 권장 (정량적 수치 포함)
+3. differentiation: RFP 요구사항 기반으로만 8~10개 권장 (정성적 설명만 사용)
    🚨 중요: RFP와 무관한 산업 분야의 차별화는 포함하지 마세요!
+   🚨 수치 금지: 퍼센트, 정량적 수치, 증빙 데이터 사용 절대 금지!
 
 Note: risks와 kpis는 별도 생성되므로 생성하지 마세요!
 
