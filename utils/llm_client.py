@@ -53,10 +53,37 @@ class LLMClient:
                 
             else:
                 print("⚠️ LLM Client: API 키 없음 → 기본 모드")
+                self._print_api_setup_guide()
                 
         except Exception as e:
             print(f"❌ LLM Client 초기화 실패: {e}")
             self.client = None
+    
+    def _print_api_setup_guide(self):
+        """API 키 설정 가이드 출력"""
+        print("\n" + "="*60)
+        print("🔑 AI 모델 API 키 설정이 필요합니다")
+        print("="*60)
+        print("1. 프로젝트 루트에 .env 파일을 생성하세요")
+        print("2. 다음 중 하나의 설정을 추가하세요:")
+        print()
+        print("   [Azure OpenAI 설정 - 권장]")
+        print("   AOAI_API_KEY=your_azure_openai_api_key")
+        print("   AOAI_ENDPOINT=https://your-resource-name.openai.azure.com/")
+        print("   AOAI_API_VERSION=2024-02-15-preview")
+        print("   AOAI_DEPLOY_GPT4O=gpt-4o")
+        print("   AOAI_DEPLOY_GPT4O_MINI=gpt-4o-mini")
+        print()
+        print("   [또는 OpenAI 설정]")
+        print("   OPENAI_API_KEY=your_openai_api_key")
+        print()
+        print("3. API 키를 발급받으려면:")
+        print("   - Azure OpenAI: https://portal.azure.com")
+        print("   - OpenAI: https://platform.openai.com")
+        print()
+        print("⚠️  API 키 없이는 AI 기반 전략 분석이 불가능하며,")
+        print("   기본 템플릿 기반 전략만 생성됩니다.")
+        print("="*60 + "\n")
     
     def is_available(self) -> bool:
         """LLM 사용 가능 여부"""
@@ -136,28 +163,63 @@ class LLMClient:
         if not response:
             return None
         
-        try:
-            # 1. 직접 JSON 파싱 시도
-            return json.loads(response)
-        except json.JSONDecodeError:
-            pass
+        # 디버깅을 위한 로그
+        print(f"[JSON 파싱] 입력 텍스트 길이: {len(response)}")
+        print(f"[JSON 파싱] 입력 텍스트 시작: {response[:200]}...")
         
-        # 2. JSON 블록 추출 시도 (```json ... ```)
+        # 1. 직접 JSON 파싱 시도
+        try:
+            result = json.loads(response)
+            print("[JSON 파싱] 직접 파싱 성공")
+            return result
+        except json.JSONDecodeError as e:
+            print(f"[JSON 파싱] 직접 파싱 실패: {e}")
+        
+        # 2. 텍스트 정리 후 재시도
+        cleaned_response = response.strip()
+        
+        # 불필요한 앞뒤 텍스트 제거
+        if cleaned_response.startswith('```json'):
+            cleaned_response = cleaned_response[7:].strip()
+        elif cleaned_response.startswith('```'):
+            cleaned_response = cleaned_response[3:].strip()
+        
+        if cleaned_response.endswith('```'):
+            cleaned_response = cleaned_response[:-3].strip()
+        
+        # 첫 번째 { 부터 마지막 } 까지 추출
+        start_idx = cleaned_response.find('{')
+        end_idx = cleaned_response.rfind('}')
+        
+        if start_idx >= 0 and end_idx > start_idx:
+            cleaned_response = cleaned_response[start_idx:end_idx+1]
+        
+        try:
+            result = json.loads(cleaned_response)
+            print("[JSON 파싱] 정리 후 파싱 성공")
+            return result
+        except json.JSONDecodeError as e:
+            print(f"[JSON 파싱] 정리 후 파싱 실패: {e}")
+        
+        # 3. JSON 블록 추출 시도 (정규식)
         json_patterns = [
             r'```json\s*(\{.*?\})\s*```',
             r'```\s*(\{.*?\})\s*```',
-            r'(\{[\s\S]*\})',  # 기본 JSON 객체
+            r'(\{[\s\S]*?\})',  # 기본 JSON 객체 (non-greedy)
         ]
         
-        for pattern in json_patterns:
+        for i, pattern in enumerate(json_patterns):
             matches = re.findall(pattern, response, re.DOTALL)
-            for match in matches:
+            for j, match in enumerate(matches):
                 try:
-                    return json.loads(match)
-                except json.JSONDecodeError:
+                    result = json.loads(match)
+                    print(f"[JSON 파싱] 패턴 {i+1} 매치 {j+1} 파싱 성공")
+                    return result
+                except json.JSONDecodeError as e:
+                    print(f"[JSON 파싱] 패턴 {i+1} 매치 {j+1} 파싱 실패: {e}")
                     continue
         
-        # 3. 부분 JSON 추출 (첫 번째 완전한 객체)
+        # 4. 부분 JSON 추출 (첫 번째 완전한 객체)
         brace_count = 0
         start_idx = -1
         
@@ -171,10 +233,40 @@ class LLMClient:
                 if brace_count == 0 and start_idx != -1:
                     try:
                         json_str = response[start_idx:i+1]
-                        return json.loads(json_str)
-                    except json.JSONDecodeError:
+                        result = json.loads(json_str)
+                        print("[JSON 파싱] 중괄호 추적 파싱 성공")
+                        return result
+                    except json.JSONDecodeError as e:
+                        print(f"[JSON 파싱] 중괄호 추적 파싱 실패: {e}")
                         continue
         
+        # 5. 마지막 시도: 응답에서 JSON 유사 부분 추출
+        try:
+            # 응답에서 JSON 키워드가 포함된 부분 찾기
+            lines = response.split('\n')
+            json_lines = []
+            in_json = False
+            
+            for line in lines:
+                line = line.strip()
+                if line.startswith('{') or '"summary"' in line or '"focus"' in line:
+                    in_json = True
+                
+                if in_json:
+                    json_lines.append(line)
+                
+                if in_json and line.endswith('}') and line.count('}') >= line.count('{'):
+                    break
+            
+            if json_lines:
+                json_text = '\n'.join(json_lines)
+                result = json.loads(json_text)
+                print("[JSON 파싱] 키워드 기반 추출 파싱 성공")
+                return result
+        except Exception as e:
+            print(f"[JSON 파싱] 키워드 기반 추출 파싱 실패: {e}")
+        
+        print("[JSON 파싱] 모든 파싱 시도 실패")
         return None
     
     def filter_content(self, items: List[str], category: str = "") -> List[str]:

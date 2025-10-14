@@ -92,14 +92,54 @@ def _shorten(text: str, max_len: int = 160) -> str:
     return (text[: max_len - 3] + "...") if len(text) > max_len else text
 
 
+def _remove_numbers_from_strategy(strategy_data: Dict[str, Any]) -> Dict[str, Any]:
+    """전략 데이터에서 모든 수치를 제거하고 정성적 표현으로 대체"""
+    if not isinstance(strategy_data, dict):
+        return strategy_data
+    
+    # 딥 카피 생성
+    import copy
+    cleaned_strategy = copy.deepcopy(strategy_data)
+    
+    def clean_dict_recursive(obj):
+        """재귀적으로 딕셔너리와 리스트를 순회하며 텍스트 정리"""
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                obj[key] = clean_dict_recursive(value)
+        elif isinstance(obj, list):
+            for i, item in enumerate(obj):
+                obj[i] = clean_dict_recursive(item)
+        elif isinstance(obj, str):
+            return _clean_text(obj)
+        return obj
+    
+    return clean_dict_recursive(cleaned_strategy)
+
+
 def _clean_text(text: str) -> str:
-    """퍼센트 수치를 완전히 제거하고 구체적 수치로 대체하여 텍스트를 정리"""
+    """모든 수치 표현을 완전히 제거하고 정성적 표현으로 대체하여 텍스트를 정리"""
     if not text:
         return ""
     
-    # 퍼센트 수치를 구체적 수치로 대체하는 패턴들
+    # 1단계: 강력한 수치 패턴을 정성적 표현으로 대체 (더 포괄적)
+    # 모든 숫자+퍼센트+동사 조합을 정성적 표현으로 대체
+    text = re.sub(r'\d+(\.\d+)?%\s*상승', '크게 상승', text)  # 40% 상승 → 크게 상승
+    text = re.sub(r'\d+(\.\d+)?%\s*개선', '크게 개선', text)  # 25% 개선 → 크게 개선
+    text = re.sub(r'\d+(\.\d+)?%\s*향상', '대폭 향상', text)  # 35% 향상 → 대폭 향상
+    text = re.sub(r'\d+(\.\d+)?%\s*절감', '대폭 절감', text)  # 25% 절감 → 대폭 절감
+    text = re.sub(r'\d+(\.\d+)?%\s*증가', '크게 증가', text)  # 30% 증가 → 크게 증가
+    text = re.sub(r'\d+(\.\d+)?%\s*감소', '현저히 감소', text)  # 20% 감소 → 현저히 감소
+    
+    # 모든 숫자+점수 조합을 정성적 표현으로 대체  
+    text = re.sub(r'\d+(\.\d+)?점\s*이상', '높은 점수 이상', text)  # 90점 이상 → 높은 점수 이상
+    text = re.sub(r'\d+(\.\d+)?점', '높은 점수', text)  # 90점 → 높은 점수
+    
+    # 남은 모든 숫자+퍼센트 조합을 정성적 표현으로 대체
+    text = re.sub(r'\d+(\.\d+)?%', '크게', text)  # 나머지 % → 크게
+    
+    # 2단계: 기존 패턴들도 적용
     replacements = {
-        # 성능 개선 관련 - 더 구체적인 표현으로 대체
+        # 퍼센트 수치 관련 - 더 구체적인 표현으로 대체
         r'\d+%\s*개선': '크게 개선',
         r'\d+%\s*향상': '대폭 향상', 
         r'\d+%\s*감소': '현저히 감소',
@@ -117,20 +157,44 @@ def _clean_text(text: str) -> str:
         r'\d+%\s*확대': '대폭 확대',
         r'\d+%\s*축소': '현저히 축소',
         
+        # 점수 표현 관련
+        r'\d+점': '높은 점수',
+        r'\d+\.\d+점': '높은 점수',
+        r'\d+점대': '높은 점수대',
+        r'\d+점 이상': '높은 점수 이상',
+        r'\d+점 이하': '낮은 점수 이하',
+        
+        # 주/일/월/년 수치 표현
+        r'\d+주\s*\([^)]*\)': '짧은 기간',
+        r'\d+일': '짧은 기간',
+        r'\d+개월': '중간 기간',
+        r'\d+년': '긴 기간',
+        r'Week\s*\d+[~-]\d+': '기간',
+        r'Week\s*\d+': '기간',
+        
         # 화살표와 함께 나오는 패턴들
         r'\d+%→\d+%': '대폭',
         r'\d+%→\d+': '대폭',
         r'\d+→\d+%': '대폭',
         r'→\d+%': '→대폭',
+        r'\d+→\d+': '대폭',
         
-        # 괄호 안의 퍼센트 수치들
+        # 괄호 안의 모든 수치들
         r'\([^)]*\d+%[^)]*\)': '',  # (85%, 90% 등) 완전 제거
         r'\([^)]*\d+\.\d+%[^)]*\)': '',  # (85.5% 등) 완전 제거
+        r'\([^)]*\d+점[^)]*\)': '',  # (85점 등) 완전 제거
+        r'\([^)]*\d+주[^)]*\)': '',  # (4주 등) 완전 제거
+        r'\([^)]*\d+일[^)]*\)': '',  # (30일 등) 완전 제거
+        r'\([^)]*\d+개월[^)]*\)': '',  # (3개월 등) 완전 제거
+        r'\([^)]*\d+년[^)]*\)': '',  # (2년 등) 완전 제거
         
-        # 단독 퍼센트 수치들 (문장 중간에 있는 경우)
+        # 단독 수치들 (문장 중간에 있는 경우)
         r'\s*\d+%\s*': ' ',  # 공백과 함께 있는 퍼센트 제거
         r'\d+%': '',  # 나머지 퍼센트 제거
         r'\d+\.\d+%': '',  # 소수점 퍼센트 제거
+        r'\s*\d+점\s*': ' ',  # 공백과 함께 있는 점수 제거
+        r'\d+점': '',  # 나머지 점수 제거
+        r'\d+\.\d+점': '',  # 소수점 점수 제거
         
         # 증빙 수치 관련 표현들
         r'\([^)]*증빙[^)]*\)': '',
@@ -144,12 +208,33 @@ def _clean_text(text: str) -> str:
         r'\([^)]*절감[^)]*\)': '',
         r'\([^)]*증가[^)]*\)': '',
         r'\([^)]*감소[^)]*\)': '',
-        r'\([^)]*정량 검증[^)]*\)': ''
+        r'\([^)]*정량 검증[^)]*\)': '',
+        r'\([^)]*성능[^)]*\)': '',
+        r'\([^)]*효율[^)]*\)': '',
+        r'\([^)]*속도[^)]*\)': '',
+        r'\([^)]*처리량[^)]*\)': '',
+        r'\([^)]*용량[^)]*\)': '',
+        r'\([^)]*응답시간[^)]*\)': '',
+        r'\([^)]*지연[^)]*\)': '',
+        r'\([^)]*정확도[^)]*\)': '',
+        r'\([^)]*가용성[^)]*\)': '',
+        r'\([^)]*안정성[^)]*\)': '',
+        r'\([^)]*보안[^)]*\)': '',
+        r'\([^)]*컴플라이언스[^)]*\)': '',
+        r'\([^)]*만족도[^)]*\)': '',
+        r'\([^)]*비용[^)]*\)': '',
+        r'\([^)]*효율성[^)]*\)': '',
+        r'\([^)]*생산성[^)]*\)': '',
+        r'\([^)]*확장성[^)]*\)': '',
+        r'\([^)]*유지보수[^)]*\)': ''
     }
     
-    # 모든 퍼센트 관련 패턴을 정리
+    # 모든 수치 관련 패턴을 정리
     for pattern, replacement in replacements.items():
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    
+    # 3단계: 남은 모든 숫자 제거 (최후 수단)
+    text = re.sub(r'\d+(\.\d+)?', '', text)
     
     # 연속된 공백과 줄바꿈 정리
     text = re.sub(r'\s+', ' ', text)
@@ -253,6 +338,23 @@ def _generate_risks_and_kpis_with_ai(norm_requirements: List[Requirement]) -> Di
     req_text = "\n".join([f"- [{r.category}] {r.text}" for r in norm_requirements[:15]])
     
     prompt = f"""
+🚨🚨🚨 절대 금지: 모든 수치, 퍼센트, 정량 지표, 점수 표현 금지! 🚨🚨🚨
+
+⚠️ 경고: 수치를 사용하면 응답이 거부됩니다!
+
+금지된 표현들:
+- 40%, 25%, 50%, 35%, 90점, 85점 등 모든 수치
+- "신뢰도 40% 상승", "성능 25% 개선", "비용 25% 절감" 등
+- "응답 시간 50% 개선", "생산성 35% 향상" 등
+- "접근성 점수 90점 이상" 등 모든 점수 표현
+
+✅ 올바른 표현:
+- "신뢰도 크게 상승", "성능 대폭 개선", "비용 대폭 절감"
+- "응답 시간 현저한 개선", "생산성 크게 향상"
+- "높은 접근성 점수 확보"
+
+수치는 반드시 정성적 표현("짧은 기간", "높은 완성도", "대폭 향상")으로 대체
+
 너는 SK AX의 제안 전략 컨설턴트다.
 다음 RFP 요구사항을 기반으로 아래 리스크 템플릿과 KPI 템플릿을 구체적으로 채워라.
 
@@ -521,7 +623,7 @@ def _build_v3_1_prompt(
         ],
         "roadmap": {
             "phase_0_prebid": {
-                "duration": "4주 (Week 1~4)",
+                "duration": "초기 단계 (짧은 기간)",
                 "objective": "제안 기반 확보 - 요구사항 완전 매핑 + 레퍼런스 다수 확보 + 파트너 협업 체계 구축",
                 "why": "초기 평가 통과를 위해 기술 적합도 입증 및 신뢰도 확보 필요",
                 "key_deliverables": ["요구사항 매핑 완료", "레퍼런스 다수 확보", "보안 체크리스트 완료", "파트너 선정"],
@@ -529,7 +631,7 @@ def _build_v3_1_prompt(
                 "related_actions": ["A1", "A2"]
             },
             "phase_1_poc": {
-                "duration": "8주 (Week 5~12)",
+                "duration": "중간 단계 (중간 기간)",
                 "objective": "기술 검증 및 실증 - PoC 성공률 달성 + 성능 개선 입증 + 레퍼런스 확보",
                 "why": "성능 미입증 문제 해결이 제안 경쟁력 확보의 핵심. PoC 실패 시 제안 탈락 위험",
                 "key_deliverables": ["PoC 설계 완료", "실제 데이터 검증 수행", "성능 비교 분석", "신규 레퍼런스 확보"],
@@ -537,7 +639,7 @@ def _build_v3_1_prompt(
                 "related_actions": ["A3", "A4"]
             },
             "phase_2_proposal": {
-                "duration": "3주 (Week 13~15)",
+                "duration": "최종 단계 (짧은 기간)",
                 "objective": "제안서 완성 - 차별화 다수 확립 + 평가 항목 완전 대응 + 경쟁력 대폭 향상",
                 "why": "PoC 결과를 제안서에 통합하여 경쟁사 대비 차별화 명확히 제시. 완성도 높은 수준 확보",
                 "key_deliverables": ["차별화 포인트 다수", "TCO 분석 완료", "기술 제안서 작성", "리스크 대응 계획"],
@@ -565,6 +667,23 @@ def _build_v3_1_prompt(
     }
 
     prompt = f"""
+🚨🚨🚨 절대 금지: 모든 수치, 퍼센트, 정량 지표, 점수 표현 금지! 🚨🚨🚨
+
+⚠️ 경고: 수치를 사용하면 응답이 거부됩니다!
+
+금지된 표현들:
+- 40%, 25%, 50%, 35%, 90점, 85점 등 모든 수치
+- "신뢰도 40% 상승", "성능 25% 개선", "비용 25% 절감" 등
+- "응답 시간 50% 개선", "생산성 35% 향상" 등
+- "접근성 점수 90점 이상" 등 모든 점수 표현
+
+✅ 올바른 표현:
+- "신뢰도 크게 상승", "성능 대폭 개선", "비용 대폭 절감"
+- "응답 시간 현저한 개선", "생산성 크게 향상"
+- "높은 접근성 점수 확보"
+
+수치는 반드시 정성적 표현("짧은 기간", "높은 완성도", "대폭 향상")으로 대체
+
 전략 생성 가이드:
 
 필수 요구사항:
@@ -640,7 +759,10 @@ Note: 리스크와 KPI는 별도로 생성되므로 이 프롬프트에서는 �
 "[약점 활용] LG CNS의 높은 초기 도입 비용 및 복잡한 라이선스 구조 → SK AX는 구독 기반 유연한 가격 정책과 PoC 무료 제공으로 진입장벽 크게 낮춤. 클라우드 네이티브 아키텍처로 초기 투자 비용 대폭 절감."
 
 ❌ 잘못된 예시 (사용 금지):
-"생산성 40% 향상", "비용 30% 절감", "속도 25% 개선" 등 모든 수치 사용 금지
+"생산성 40% 향상", "비용 30% 절감", "속도 25% 개선", "정확도 40% 향상", "비용 20% 높은", "비용 25% 높은", "생산성 35% 향상", "비용 25% 절감", "기간 20% 단축" 등 모든 수치 사용 금지
+
+✅ 올바른 예시:
+"생산성 크게 향상", "비용 대폭 절감", "속도 현저한 개선", "정확도 대폭 향상", "비용 상당히 높은", "생산성 크게 향상", "비용 대폭 절감", "기간 대폭 단축" 등 정성적 표현만 사용
 
 필수 체크리스트:
 - 위 SWOT 데이터에서 **실제로 언급된 제품명, 서비스명, 기술명**을 반드시 포함하세요
@@ -662,9 +784,25 @@ Note: 리스크와 KPI는 별도로 생성되므로 이 프롬프트에서는 �
 - 🚨 라벨 금지: '강점 대응:', '약점 활용:' 같은 한글 라벨 사용 금지! 반드시 [강점 대응], [약점 활용] 대괄호 표기만 사용!
 
 ※ 반환은 아래 JSON 스키마 **그대로**만 출력(설명 금지):
+
+**반드시 JSON 형식으로만 응답하세요!**
+- 마크다운 코드 블록(```) 사용 금지
+- 설명이나 추가 텍스트 포함 금지
+- 순수 JSON 객체만 반환
+
 {json.dumps(schema_hint, ensure_ascii=False)}
 
 중요: "risks"와 "kpis" 필드는 절대 포함하지 마세요! (별도로 생성됨)
+
+**응답 예시:**
+{{
+  "summary": "전략 요약 내용",
+  "focus": {{"internal": "...", "competitor": "...", "market": "..."}},
+  "prioritized_actions": [...],
+  "roadmap": {{...}},
+  "differentiation": [...],
+  "appendix": {{...}}
+}}
 """
     return prompt
 
@@ -677,51 +815,138 @@ def _fallback_strategy(
     internal_matches: List[Dict[str, Any]],
     competitor_profiles: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """LLM 실패 시 최소한의 오류 정보만 반환."""
+    """LLM 실패 시 기본 템플릿 기반 전략 생성."""
+    
+    # 요구사항 카테고리별 그룹화
+    requirement_groups = {}
+    for req in norm_requirements:
+        cat = req.category
+        if cat not in requirement_groups:
+            requirement_groups[cat] = []
+        requirement_groups[cat].append(req.text)
+    
+    # 기본 액션 플랜 생성
+    basic_actions = []
+    action_counter = 1
+    
+    # 기술 카테고리 액션
+    if "기술" in requirement_groups:
+        basic_actions.append({
+            "id": f"A{action_counter}",
+            "action": "기술 요구사항 분석 및 솔루션 설계",
+            "why": "RFP의 기술 요구사항을 완전히 이해하고 SK AX의 기술 역량과 매칭하여 최적의 솔루션을 설계해야 합니다.",
+            "how": "1) 기술 요구사항 상세 분석 → 2) SK AX 내부 기술 역량 검토 → 3) 솔루션 아키텍처 설계 → 4) 기술적 차별화 포인트 도출",
+            "strategy_approach": "Differentiation",
+            "owner": "Tech",
+            "impact": "high",
+            "urgency": "high",
+            "effort": "medium",
+            "expected_timeline": "짧은 기간",
+            "expected_result": "기술 요구사항 완전 대응 및 차별화 솔루션 확보",
+            "related_fit_ids": [],
+            "related_risks": []
+        })
+        action_counter += 1
+    
+    # 보안/품질 카테고리 액션
+    if "보안/품질" in requirement_groups:
+        basic_actions.append({
+            "id": f"A{action_counter}",
+            "action": "보안 및 품질 요구사항 대응 계획 수립",
+            "why": "보안 및 품질 요구사항은 제안 평가의 핵심 요소로 철저한 대응이 필요합니다.",
+            "how": "1) 보안 요구사항 분석 → 2) SK AX 보안 인증 현황 검토 → 3) 품질 관리 프로세스 설계 → 4) 컴플라이언스 체크리스트 작성",
+            "strategy_approach": "Defensive",
+            "owner": "PM",
+            "impact": "high",
+            "urgency": "high",
+            "effort": "medium",
+            "expected_timeline": "짧은 기간",
+            "expected_result": "보안 및 품질 요구사항 완전 대응 체계 구축",
+            "related_fit_ids": [],
+            "related_risks": []
+        })
+        action_counter += 1
+    
+    # 사업/운영 카테고리 액션
+    if "사업/운영" in requirement_groups:
+        basic_actions.append({
+            "id": f"A{action_counter}",
+            "action": "사업 및 운영 요구사항 대응 전략 수립",
+            "why": "사업 및 운영 측면의 요구사항은 프로젝트 성공의 핵심 요소입니다.",
+            "how": "1) 사업 요구사항 분석 → 2) 운영 체계 설계 → 3) 인력 계획 수립 → 4) 일정 및 마일스톤 정의",
+            "strategy_approach": "Offensive",
+            "owner": "PM",
+            "impact": "medium",
+            "urgency": "medium",
+            "effort": "medium",
+            "expected_timeline": "중간 기간",
+            "expected_result": "사업 및 운영 요구사항 대응 전략 완성",
+            "related_fit_ids": [],
+            "related_risks": []
+        })
+        action_counter += 1
+    
+    # 경쟁사 대응 기본 전략
+    competitor_counters = []
+    for company in competitor_profiles.keys():
+        competitor_counters.append({
+            "company": company,
+            "counter": f"[강점 대응] {company}의 주요 강점에 대응하여 SK AX의 차별화된 솔루션과 기술 역량을 강조하여 경쟁 우위를 확보합니다.\n[약점 활용] {company}의 약점을 활용하여 SK AX의 강점을 부각시키고 고객에게 더 나은 가치를 제공할 수 있는 방안을 제시합니다."
+        })
+    
+    # 기본 차별화 포인트
+    differentiation = [
+        "SK AX의 검증된 기술 역량과 풍부한 프로젝트 경험",
+        "고객 맞춤형 솔루션 설계 및 구현 능력",
+        "체계적인 프로젝트 관리 및 품질 보증 체계",
+        "전문 인력과 안정적인 지원 체계",
+        "비용 효율적인 솔루션 제공"
+    ]
+    
     return {
-        "summary": f"AI 분석을 사용할 수 없습니다. 총 {len(norm_requirements)}개 요구사항이 입력되었으나, AI 모델 연결 실패로 전략을 생성하지 못했습니다.",
+        "summary": f"AI 모델 연결 실패로 인해 기본 템플릿 기반 전략을 생성했습니다. 총 {len(norm_requirements)}개 요구사항을 분석하여 {len(basic_actions)}개의 기본 액션 플랜을 수립했습니다.",
         "focus": {
-            "internal": "AI 분석 실패로 내부 역량 분석을 수행하지 못했습니다.",
-            "competitor": f"AI 분석 실패로 경쟁사 {len(competitor_profiles)}개사에 대한 대응 전략을 생성하지 못했습니다.",
-            "market": "AI 분석 실패로 시장 트렌드 분석을 수행하지 못했습니다."
+            "internal": f"내부 역량 매칭 데이터 {len(internal_matches)}개를 기반으로 SK AX의 기술 역량과 프로젝트 경험을 활용한 차별화 전략을 수립합니다.",
+            "competitor": f"경쟁사 {len(competitor_profiles)}개사에 대한 기본 대응 전략을 수립하여 경쟁 우위를 확보합니다.",
+            "market": "시장 동향과 고객 니즈를 반영한 전략적 접근 방식을 채택합니다."
         },
-        "prioritized_actions": [],
+        "prioritized_actions": basic_actions,
         "roadmap": {
             "phase_0_prebid": {
-                "duration": "N/A",
-                "objective": "AI 분석 실패",
-                "why": "AI 모델에 연결할 수 없어 로드맵을 생성하지 못했습니다.",
-                "key_deliverables": [],
-                "expected_outcome": "N/A",
-                "related_actions": []
+                "duration": "짧은 기간",
+                "objective": "기본 요구사항 분석 및 초기 전략 수립",
+                "why": "AI 분석 실패로 수동 분석을 통해 기본적인 요구사항 분석과 전략 수립이 필요합니다.",
+                "key_deliverables": ["요구사항 분석 완료", "기본 액션 플랜 수립", "경쟁사 분석 기본안"],
+                "expected_outcome": "기본 전략 수립 및 제안 방향성 확정",
+                "related_actions": [f"A{i}" for i in range(1, min(len(basic_actions)+1, 4))]
             },
             "phase_1_poc": {
-                "duration": "N/A",
-                "objective": "AI 분석 실패",
-                "why": "AI 모델에 연결할 수 없어 로드맵을 생성하지 못했습니다.",
-                "key_deliverables": [],
-                "expected_outcome": "N/A",
-                "related_actions": []
+                "duration": "중간 기간",
+                "objective": "기술 검증 및 상세 전략 수립",
+                "why": "기본 전략을 바탕으로 기술적 검증과 상세한 실행 계획 수립이 필요합니다.",
+                "key_deliverables": ["기술 검증 계획", "상세 실행 로드맵", "리스크 대응 계획"],
+                "expected_outcome": "검증된 기술 솔루션 및 실행 계획 완성",
+                "related_actions": [f"A{i}" for i in range(2, min(len(basic_actions)+1, 5))]
             },
             "phase_2_proposal": {
-                "duration": "N/A",
-                "objective": "AI 분석 실패",
-                "why": "AI 모델에 연결할 수 없어 로드맵을 생성하지 못했습니다.",
-                "key_deliverables": [],
-                "expected_outcome": "N/A",
-                "related_actions": []
+                "duration": "짧은 기간",
+                "objective": "최종 제안서 작성 및 경쟁력 강화",
+                "why": "모든 분석과 계획을 종합하여 경쟁력 있는 최종 제안서를 작성해야 합니다.",
+                "key_deliverables": ["최종 제안서", "차별화 전략", "비용 분석"],
+                "expected_outcome": "경쟁력 있는 제안서 완성 및 수주 확률 향상",
+                "related_actions": [f"A{i}" for i in range(3, len(basic_actions)+1)]
             }
         },
         "risks": [],
         "kpis": [],
-        "differentiation": [],
+        "differentiation": differentiation,
         "appendix": {
-            "requirement_groups": [],
+            "requirement_groups": [{"category": cat, "items": items} for cat, items in requirement_groups.items()],
             "fit_table": [],
-            "competitor_counters": []
+            "competitor_counters": competitor_counters
         },
         "error": True,
-        "error_message": "AI 모델 연결 실패로 전략을 생성할 수 없습니다."
+        "error_message": "AI 모델 연결 실패로 기본 템플릿 기반 전략을 생성했습니다. 더 정확한 분석을 위해서는 AI 모델 연결 상태를 확인해주세요."
     }
 
 
@@ -906,11 +1131,11 @@ def _generate_deal_brief(strategy: Dict[str, Any]) -> str:
         *(_bullet_actions(actions, 5)),
         "",
         "## 5) 로드맵",
-        f"- **Pre-Bid ({roadmap.get('phase_0_prebid', {}).get('duration', '4주')})**: {roadmap.get('phase_0_prebid', {}).get('objective', '-')}",
+        f"- **Pre-Bid ({roadmap.get('phase_0_prebid', {}).get('duration', '초기 단계')})**: {roadmap.get('phase_0_prebid', {}).get('objective', '-')}",
         f"  └ {roadmap.get('phase_0_prebid', {}).get('expected_outcome', '-')}",
-        f"- **PoC ({roadmap.get('phase_1_poc', {}).get('duration', '8주')})**: {roadmap.get('phase_1_poc', {}).get('objective', '-')}",
+        f"- **PoC ({roadmap.get('phase_1_poc', {}).get('duration', '중간 단계')})**: {roadmap.get('phase_1_poc', {}).get('objective', '-')}",
         f"  └ {roadmap.get('phase_1_poc', {}).get('expected_outcome', '-')}",
-        f"- **Proposal ({roadmap.get('phase_2_proposal', {}).get('duration', '3주')})**: {roadmap.get('phase_2_proposal', {}).get('objective', '-')}",
+        f"- **Proposal ({roadmap.get('phase_2_proposal', {}).get('duration', '최종 단계')})**: {roadmap.get('phase_2_proposal', {}).get('objective', '-')}",
         f"  └ {roadmap.get('phase_2_proposal', {}).get('expected_outcome', '-')}",
         "",
         "## 6) 리스크 & 대응",
@@ -967,12 +1192,62 @@ def strategy_synthesizer(
     # 3) LLM 호출 or 폴백
     try:
         if is_llm_available():
-            # temperature를 높이고 max_tokens 충분히 확보하여 상세한 응답 유도
-            result_text = call_llm(prompt, temperature=0.8, max_tokens=16000)
+            # temperature를 낮추고 max_tokens 충분히 확보하여 안정적인 JSON 응답 유도
+            result_text = call_llm(prompt, temperature=0.3, max_tokens=16000)
             print(f"[전략 합성 v3.1] LLM 응답 길이: {len(result_text) if result_text else 0} 문자")
             
             if result_text:
-                strategy_data = parse_json_response(result_text)
+                print(f"[전략 합성 v3.1] 원본 LLM 응답 (처음 500자): {result_text[:500]}...")
+                
+                # JSON 파싱 전에 응답 텍스트 정리
+                cleaned_text = result_text.strip()
+                
+                # 다양한 JSON 추출 패턴 시도
+                json_candidates = []
+                
+                # 1. ```json 블록 추출
+                if '```json' in cleaned_text:
+                    start_idx = cleaned_text.find('```json') + 7
+                    end_idx = cleaned_text.find('```', start_idx)
+                    if end_idx > start_idx:
+                        json_candidates.append(cleaned_text[start_idx:end_idx].strip())
+                
+                # 2. ``` 블록 추출 (json 라벨 없이)
+                elif '```' in cleaned_text:
+                    start_idx = cleaned_text.find('```') + 3
+                    end_idx = cleaned_text.find('```', start_idx)
+                    if end_idx > start_idx:
+                        json_candidates.append(cleaned_text[start_idx:end_idx].strip())
+                
+                # 3. 직접 JSON 객체 추출
+                start_idx = cleaned_text.find('{')
+                end_idx = cleaned_text.rfind('}')
+                if start_idx >= 0 and end_idx > start_idx:
+                    json_candidates.append(cleaned_text[start_idx:end_idx+1])
+                
+                # 4. 원본 텍스트도 후보에 추가
+                json_candidates.append(cleaned_text)
+                
+                # 각 후보를 순서대로 파싱 시도
+                strategy_data = None
+                for i, candidate in enumerate(json_candidates):
+                    if not candidate:
+                        continue
+                    
+                    print(f"[전략 합성 v3.1] JSON 파싱 시도 {i+1}: {candidate[:200]}...")
+                    
+                    try:
+                        strategy_data = parse_json_response(candidate)
+                        if strategy_data and isinstance(strategy_data, dict):
+                            print(f"[전략 합성 v3.1] JSON 파싱 성공 (시도 {i+1})")
+                            # 수치 제거 후처리 적용
+                            strategy_data = _remove_numbers_from_strategy(strategy_data)
+                            break
+                        else:
+                            print(f"[전략 합성 v3.1] JSON 파싱 실패 (시도 {i+1}): 결과가 dict가 아님")
+                    except Exception as e:
+                        print(f"[전략 합성 v3.1] JSON 파싱 오류 (시도 {i+1}): {e}")
+                        continue
                 if isinstance(strategy_data, dict):
                     # 응답 품질 검증 (risks/kpis는 별도 생성되므로 제외)
                     competitor_counters = strategy_data.get('appendix', {}).get('competitor_counters', [])
@@ -997,6 +1272,23 @@ def strategy_synthesizer(
                         
                         # 더 강력한 프롬프트로 재시도
                         enhanced_prompt = f"""
+🚨🚨🚨 절대 금지: 모든 수치, 퍼센트, 정량 지표, 점수 표현 금지! 🚨🚨🚨
+
+⚠️ 경고: 수치를 사용하면 응답이 거부됩니다!
+
+금지된 표현들:
+- 40%, 25%, 50%, 35%, 90점, 85점 등 모든 수치
+- "신뢰도 40% 상승", "성능 25% 개선", "비용 25% 절감" 등
+- "응답 시간 50% 개선", "생산성 35% 향상" 등
+- "접근성 점수 90점 이상" 등 모든 점수 표현
+
+✅ 올바른 표현:
+- "신뢰도 크게 상승", "성능 대폭 개선", "비용 대폭 절감"
+- "응답 시간 현저한 개선", "생산성 크게 향상"
+- "높은 접근성 점수 확보"
+
+수치는 반드시 정성적 표현("짧은 기간", "높은 완성도", "대폭 향상")으로 대체
+
 STOP! 이전 응답 거부됨!
 
 이전 응답 품질 개선 필요: 
@@ -1053,16 +1345,33 @@ Note: risks와 kpis는 별도 생성되므로 생성하지 마세요!
 
 더 풍부하고 실행 가능한 전략을 제공하세요!
 
+**중요: 반드시 JSON 형식으로만 응답하세요!**
+- 마크다운 코드 블록(```) 사용 금지
+- 설명이나 추가 텍스트 포함 금지
+- 순수 JSON 객체만 반환
+
 원래 요청:
 {prompt}
 
 지금 즉시 위 개수를 충족하는 JSON을 생성하세요!
+
+**응답 형식:**
+{{
+  "summary": "전략 요약 내용",
+  "focus": {{"internal": "...", "competitor": "...", "market": "..."}},
+  "prioritized_actions": [...],
+  "roadmap": {{...}},
+  "differentiation": [...],
+  "appendix": {{...}}
+}}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"""
                         
                         result_text = call_llm(enhanced_prompt, temperature=0.95, max_tokens=16000)
                         if result_text:
                             strategy_data_retry = parse_json_response(result_text)
                             if isinstance(strategy_data_retry, dict):
+                                # 수치 제거 후처리 적용
+                                strategy_data_retry = _remove_numbers_from_strategy(strategy_data_retry)
                                 # 재시도 결과 재검증
                                 retry_counters = strategy_data_retry.get('appendix', {}).get('competitor_counters', [])
                                 retry_actions = strategy_data_retry.get('prioritized_actions', [])
@@ -1145,11 +1454,45 @@ Note: risks와 kpis는 별도 생성되므로 생성하지 마세요!
         
         # LLM 미가용 이유 판단
         if not is_llm_available():
-            error_msg = "오류: AI 모델에 연결할 수 없습니다. API 키 설정을 확인하거나 네트워크 연결 상태를 점검해주세요."
+            error_msg = """🔑 AI 모델 연결 실패
+
+AI 모델에 연결할 수 없습니다. 다음을 확인해주세요:
+
+1. API 키 설정 확인:
+   - 프로젝트 루트에 .env 파일이 있는지 확인
+   - Azure OpenAI 또는 OpenAI API 키가 올바르게 설정되었는지 확인
+
+2. 네트워크 연결 상태 점검:
+   - 인터넷 연결이 정상인지 확인
+   - 방화벽이나 프록시 설정이 API 호출을 차단하지 않는지 확인
+
+3. API 키 발급:
+   - Azure OpenAI: https://portal.azure.com
+   - OpenAI: https://platform.openai.com
+
+⚠️ API 키가 없으면 기본 템플릿 기반 전략만 생성됩니다."""
         elif not result_text:
-            error_msg = "오류: AI 모델이 응답하지 않았습니다. 잠시 후 다시 시도해주세요."
+            error_msg = """⚠️ AI 모델 응답 없음
+
+AI 모델이 응답하지 않았습니다. 다음을 시도해보세요:
+
+1. 잠시 후 다시 시도
+2. API 키가 유효한지 확인
+3. API 사용량 한도 확인
+4. 네트워크 연결 상태 점검
+
+기본 템플릿 기반 전략이 생성되었습니다."""
         else:
-            error_msg = "오류: AI 응답을 JSON으로 파싱할 수 없습니다. AI 모델의 응답 형식이 올바르지 않습니다."
+            error_msg = """⚠️ AI 응답 형식 오류
+
+AI 모델의 응답을 JSON으로 파싱할 수 없습니다.
+
+가능한 원인:
+1. AI 모델이 JSON 형식이 아닌 텍스트를 반환
+2. 응답이 불완전하거나 손상됨
+3. 특수 문자나 인코딩 문제
+
+기본 템플릿 기반 전략이 생성되었습니다."""
         
         return {
             "strategy": fb, 
