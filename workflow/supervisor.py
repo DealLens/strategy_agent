@@ -210,8 +210,8 @@ class ParallelSupervisor:
                         "key_technologies": profile.get("key_technologies", [])
                     })
                 
-                # generate_competitive_strategy 호출
-                strategy_response = await generate_competitive_strategy.ainvoke({
+                # generate_competitive_strategy 호출 (동기 함수이므로 invoke 사용)
+                strategy_response = generate_competitive_strategy.invoke({
                     "skax_profile": skax_profile,
                     "competitors": competitors_list
                 })

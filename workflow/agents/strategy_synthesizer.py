@@ -229,7 +229,7 @@ def _generate_risks_and_kpis_with_ai(norm_requirements: List[Requirement]) -> Di
     # 3️⃣ LLM 호출
     try:
         if is_llm_available():
-            print("  [리스크/KPI] 🔥 AI 생성 중...")
+            print("  [리스크/KPI] AI 생성 중...")
             response = call_llm(prompt, temperature=0.5, max_tokens=6000)
             
             if response:
@@ -237,17 +237,17 @@ def _generate_risks_and_kpis_with_ai(norm_requirements: List[Requirement]) -> Di
                 if isinstance(data, dict) and "risks" in data and "kpis" in data:
                     risks = data.get("risks", [])
                     kpis = data.get("kpis", [])
-                    print(f"  [리스크/KPI] ✅ AI 생성 완료 - 리스크 {len(risks)}개, KPI {len(kpis)}개")
+                    print(f"  [리스크/KPI] AI 생성 완료 - 리스크 {len(risks)}개, KPI {len(kpis)}개")
                     return data
                 else:
-                    print("  [리스크/KPI] ⚠️ JSON 형식 불일치")
+                    print("  [리스크/KPI] 경고: JSON 형식 불일치")
             else:
-                print("  [리스크/KPI] ⚠️ LLM 응답 없음")
+                print("  [리스크/KPI] 경고: LLM 응답 없음")
     except Exception as e:
-        print(f"  [리스크/KPI] ⚠️ LLM 호출 실패: {e}")
+        print(f"  [리스크/KPI] 경고: LLM 호출 실패: {e}")
 
     # 4️⃣ LLM 실패 시 — 기본 템플릿 반환 (fallback)
-    print("  [리스크/KPI] 📝 폴백 모드: 빈 템플릿 반환")
+    print("  [리스크/KPI] 폴백 모드: 빈 템플릿 반환")
     return {"risks": risk_template, "kpis": kpi_template}
 
 
@@ -485,23 +485,23 @@ def _build_v3_1_prompt(
     }
 
     prompt = f"""
-🎯 전략 생성 가이드:
+전략 생성 가이드:
 
-📌 필수 요구사항:
+필수 요구사항:
 1. appendix.competitor_counters: 6개 이상 (각 경쟁사당 2개씩)
 2. prioritized_actions: 8~10개
 3. differentiation: 8~10개
 
-💡 Note: 리스크와 KPI는 별도로 생성되므로 이 프롬프트에서는 제외
+Note: 리스크와 KPI는 별도로 생성되므로 이 프롬프트에서는 제외
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⚠️⚠️⚠️ 중요: 이것은 실제 수십억원 규모 제안서를 위한 전략 분석입니다. 추상적이거나 간단한 응답은 절대 불가합니다!
+중요: 이것은 실제 수십억원 규모 제안서를 위한 전략 분석입니다. 추상적이거나 간단한 응답은 절대 불가합니다!
 
 당신은 대형 엔터프라이즈 제안의 시니어 전략 컨설턴트입니다.
 아래 정보를 바탕으로 **매우 구체적이고 실행 가능하며 차별화된 전략**을 JSON으로 작성하세요.
 
-🚨 필수 요구사항:
+필수 요구사항:
 - 모든 수치에는 구체적인 검증 근거 필수 (PoC 결과, 벤치마크, 실측 데이터)
 - 경쟁사별 고유 기술/제품명을 위에 제공된 SWOT 데이터에서 추출하여 명시
 - 모든 차별화 포인트에 정량적 수치와 측정 방법 포함
@@ -523,23 +523,23 @@ def _build_v3_1_prompt(
 4) 액션은 Impact × Urgency × Effort 기준으로 우선순위를 정렬하세요.
 5) 로드맵은 Pre-Bid → PoC → Proposal 3단계로 작성하세요.
 
-🚨🚨🚨 절대 금지 사항 🚨🚨🚨
+절대 금지 사항
 - RFP 요구사항과 직접 관련 없는 산업 분야나 기술은 액션 플랜에 포함하지 마세요
 - 경쟁사의 주력 산업(예: 자동차, 모빌리티)이 RFP와 무관하면 해당 분야 전략을 억지로 끼워넣지 마세요
 - 모든 액션과 차별화 포인트는 반드시 RFP의 실제 요구사항에서 도출되어야 합니다
 
-📋 작성 가이드:
+작성 가이드:
 - 경쟁사 대응: RFP 요구사항과 관련된 범위 내에서만 각 경쟁사별 강점 대응 + 약점 활용 (구체적 제품명, 정량 수치, 검증 근거)
 - 액션: RFP 요구사항에서 직접 도출된 실행 항목만 작성, Impact/Urgency/Effort 기준 우선순위, why/how/expected_result 상세 작성
 - 로드맵: RFP 수행과 직접 관련된 단계만 포함, duration, objective, why, key_deliverables, expected_outcome (전략 수준)
 - 차별화: RFP 요구사항 기반 차별화만 포함, 구체적 수치와 경쟁사 비교 포함
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💡 경쟁사 대응 전략 작성 가이드 (필수):
+경쟁사 대응 전략 작성 가이드 (필수):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-위에 제공된 [주요 경쟁사 SWOT(요약)] 데이터를 **반드시 정독**하여:
+위에 제공된 [주요 경쟁사 SWOT(요약)] 데이터를 반드시 정독하여:
 
-📋 각 경쟁사당 최소 2개 작성 (강점 대응 1개 + 약점 활용 1개):
+각 경쟁사당 최소 2개 작성 (강점 대응 1개 + 약점 활용 1개):
 
 1. 강점 대응 전략 (SWOT-S 기반):
    형식: "[강점 대응] 경쟁사의 [SWOT에서 발견한 실제 강점] → 당사는 [구체적 대응 방안 + 정량 수치]"
@@ -551,7 +551,7 @@ def _build_v3_1_prompt(
    
    예시: "[약점 활용] LG CNS의 높은 초기 도입 비용 및 복잡한 라이선스 구조 → SK AX는 구독 기반 유연한 가격 정책(월 100만원부터)과 PoC 무료 제공으로 진입장벽 50% 낮춤. 클라우드 네이티브 아키텍처로 초기 투자 비용 70% 절감."
 
-⚠️⚠️⚠️ 필수 체크리스트:
+필수 체크리스트:
 - 위 SWOT 데이터에서 **실제로 언급된 제품명, 서비스명, 기술명**을 반드시 포함하세요
 - 각 전략마다 **구체적인 정량 수치**(%, 개수, 금액 등) 포함 필수
 - RFP 요구사항과 **직접 관련된** 내용만 작성
@@ -559,7 +559,7 @@ def _build_v3_1_prompt(
 - 최소 100자 이상의 상세한 설명 작성
 - 각 경쟁사당 최소 2개(강점 1 + 약점 1) 작성
 
-🚫 출력 형식 규칙:
+출력 형식 규칙:
 - 이모지(💪, 🔥, ⚡, 등) 사용 절대 금지! 비즈니스 문서이므로 텍스트만 사용
 - 마크다운 서식 사용 금지 (**, ##, 등)
 - 순수 텍스트로만 작성
@@ -567,7 +567,7 @@ def _build_v3_1_prompt(
 ※ 반환은 아래 JSON 스키마 **그대로**만 출력(설명 금지):
 {json.dumps(schema_hint, ensure_ascii=False)}
 
-⚠️ 중요: "risks"와 "kpis" 필드는 절대 포함하지 마세요! (별도로 생성됨)
+중요: "risks"와 "kpis" 필드는 절대 포함하지 마세요! (별도로 생성됨)
 """
     return prompt
 
@@ -582,7 +582,7 @@ def _fallback_strategy(
 ) -> Dict[str, Any]:
     """LLM 실패 시 최소한의 오류 정보만 반환."""
     return {
-        "summary": f"⚠️ AI 분석을 사용할 수 없습니다. 총 {len(norm_requirements)}개 요구사항이 입력되었으나, AI 모델 연결 실패로 전략을 생성하지 못했습니다.",
+        "summary": f"AI 분석을 사용할 수 없습니다. 총 {len(norm_requirements)}개 요구사항이 입력되었으나, AI 모델 연결 실패로 전략을 생성하지 못했습니다.",
         "focus": {
             "internal": "AI 분석 실패로 내부 역량 분석을 수행하지 못했습니다.",
             "competitor": f"AI 분석 실패로 경쟁사 {len(competitor_profiles)}개사에 대한 대응 전략을 생성하지 못했습니다.",
@@ -701,7 +701,7 @@ def _generate_deal_brief(strategy: Dict[str, Any]) -> str:
         return out or ["- (항목 없음)"]
 
     lines = [
-        "# 📈 전략 브리핑 (v3.1)",
+        "# 전략 브리핑 (v3.1)",
         "",
         "## 1) 전략 요약",
         _shorten(summary, 600),
@@ -791,37 +791,37 @@ def strategy_synthesizer(
                     
                     # LLM이 risks/kpis를 생성했다면 제거 (덮어쓰기 방지)
                     if "risks" in strategy_data:
-                        print(f"[전략 합성 v3.1] ⚠️ LLM이 risks 필드를 생성함 → 제거 (별도 생성본 사용)")
+                        print(f"[전략 합성 v3.1] 경고: LLM이 risks 필드를 생성함 → 제거 (별도 생성본 사용)")
                         del strategy_data["risks"]
                     if "kpis" in strategy_data:
-                        print(f"[전략 합성 v3.1] ⚠️ LLM이 kpis 필드를 생성함 → 제거 (별도 생성본 사용)")
+                        print(f"[전략 합성 v3.1] 경고: LLM이 kpis 필드를 생성함 → 제거 (별도 생성본 사용)")
                         del strategy_data["kpis"]
                     
                     # 간단한 응답이면 재시도 (매우 완화된 기준: 1개 이상, 3개 이상)
                     # 실제로는 대부분의 응답이 이보다 많이 생성되므로 기본적으로 통과
                     if len(competitor_counters) < 1 or len(actions) < 3:
-                        print("[전략 합성 v3.1] ⚠️ 응답이 너무 간단함, 상세 모드로 재시도...")
+                        print("[전략 합성 v3.1] 경고: 응답이 너무 간단함, 상세 모드로 재시도...")
                         print(f"    - 필수: 경쟁사 대응 1개 이상, 액션 3개 이상")
                         print(f"    - 현재: 경쟁사 대응 {len(competitor_counters)}개, 액션 {len(actions)}개")
                         
                         # 더 강력한 프롬프트로 재시도
                         enhanced_prompt = f"""
-🚨🚨🚨🚨🚨 STOP! 이전 응답 거부됨! 🚨🚨🚨🚨🚨
+STOP! 이전 응답 거부됨!
 
 이전 응답 품질 개선 필요: 
 - competitor_counters: {len(competitor_counters)}개 (권장: 6개 이상)
 - prioritized_actions: {len(actions)}개 (권장: 8~10개)
 
-🔥🔥🔥 더 상세하고 실행 가능한 전략을 작성하세요:
+더 상세하고 실행 가능한 전략을 작성하세요:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1️⃣ competitor_counters: 각 경쟁사당 최소 2개 (강점 1 + 약점 1)
+1. competitor_counters: 각 경쟁사당 최소 2개 (강점 1 + 약점 1)
    
-   📋 필수 형식:
+   필수 형식:
    - 강점 대응: "[강점 대응] 경쟁사의 [SWOT-S에서 발견한 실제 강점 + 제품명] → 당사는 [구체적 대응 + 정량 수치]"
    - 약점 활용: "[약점 활용] 경쟁사의 [SWOT-W에서 발견한 실제 약점] → 당사는 [차별화 전략 + 정량 수치]"
    
-   ⚠️ 필수 조건:
+   필수 조건:
    - 위 SWOT 데이터에서 실제로 언급된 제품명, 서비스명, 기술명 포함
    - 각 전략마다 구체적인 정량 수치(%, 개수, 금액 등) 필수
    - 최소 100자 이상 상세 설명
@@ -830,23 +830,23 @@ def strategy_synthesizer(
    형식: {{"company": "경쟁사명", "counter": "[강점/약점 대응] 경쟁사의 XXX → 당사는 YYY (구체적 수치)"}}
    ⚠️ 반드시 위 SWOT 데이터의 실제 내용을 분석하여 작성 (예시 복사 금지)
 
-2️⃣ prioritized_actions: RFP 요구사항에서 직접 도출된 액션만 8~10개 권장
+2. prioritized_actions: RFP 요구사항에서 직접 도출된 액션만 8~10개 권장
    → A1부터 A8 이상 (A10까지 권장)
    → 각각 why, how, strategy_approach, expected_result 모두 포함
    → **RFP와 직접 관련된** 구체적이고 실행 가능한 액션 위주
    🚨 중요: RFP와 무관한 산업 분야의 액션은 절대 포함하지 마세요!
 
-3️⃣ differentiation: RFP 요구사항 기반으로만 8~10개 권장 (정량적 수치 포함)
+3. differentiation: RFP 요구사항 기반으로만 8~10개 권장 (정량적 수치 포함)
    🚨 중요: RFP와 무관한 산업 분야의 차별화는 포함하지 마세요!
 
-💡 Note: risks와 kpis는 별도 생성되므로 생성하지 마세요!
+Note: risks와 kpis는 별도 생성되므로 생성하지 마세요!
 
-🚫 출력 형식 규칙:
+출력 형식 규칙:
 - 이모지(💪, 🔥, ⚡, 등) 사용 절대 금지! 비즈니스 문서이므로 텍스트만 사용
 - 마크다운 서식 사용 금지 (**, ##, 등)
 - 순수 텍스트로만 작성
 
-✨ 더 풍부하고 실행 가능한 전략을 제공하세요!
+더 풍부하고 실행 가능한 전략을 제공하세요!
 
 원래 요청:
 {prompt}
@@ -864,7 +864,7 @@ def strategy_synthesizer(
                                 print(f"[전략 합성 v3.1] 재시도 결과 - 경쟁사 대응: {len(retry_counters)}개, 액션: {len(retry_actions)}개")
                                 
                                 if len(retry_counters) >= 1 and len(retry_actions) >= 3:
-                                    print("[전략 합성 v3.1] ✅ 재시도 성공: 상세 응답 확보")
+                                    print("[전략 합성 v3.1] 재시도 성공: 상세 응답 확보")
                                     strategy_data = strategy_data_retry
                                     
                                     # LLM이 risks/kpis를 생성했다면 제거
@@ -879,10 +879,10 @@ def strategy_synthesizer(
                                     if generated_kpis:
                                         strategy_data["kpis"] = generated_kpis
                                 else:
-                                    print("[전략 합성 v3.1] ⚠️ 재시도 실패: 여전히 간단함")
+                                    print("[전략 합성 v3.1] 경고: 재시도 실패: 여전히 간단함")
                                     # 재시도 실패해도 원래 데이터가 있으면 그것을 사용
                                     if len(competitor_counters) > 0 or len(actions) > 0:
-                                        print("[전략 합성 v3.1] 📝 최초 응답 데이터라도 사용")
+                                        print("[전략 합성 v3.1] 최초 응답 데이터라도 사용")
                                         # strategy_data를 그대로 사용 (이미 설정됨)
                                         
                                         # 최초 응답에도 리스크/KPI 병합
@@ -895,36 +895,36 @@ def strategy_synthesizer(
                                         if generated_kpis:
                                             strategy_data["kpis"] = generated_kpis
                                     else:
-                                        print("[전략 합성 v3.1] ⚠️ 데이터 부족 → 폴백 사용")
+                                        print("[전략 합성 v3.1] 경고: 데이터 부족 → 폴백 사용")
                                         fb = _fallback_strategy(norm_requirements, internal_matches, competitor_profiles)
                                         return {
                                             "strategy": fb, 
                                             "deal_brief": _generate_deal_brief(fb),
                                             "status": "error",
-                                            "message": "❌ AI 응답이 불충분하여 전략을 생성하지 못했습니다. AI 모델이 정상적으로 작동하지 않았거나 응답 품질이 기준에 미달했습니다. (경쟁사 대응 1개 이상, 액션 3개 이상 필요)"
+                                            "message": "오류: AI 응답이 불충분하여 전략을 생성하지 못했습니다. AI 모델이 정상적으로 작동하지 않았거나 응답 품질이 기준에 미달했습니다. (경쟁사 대응 1개 이상, 액션 3개 이상 필요)"
                                         }
                     
                     # 🆕 리스크/KPI 병합
                     if generated_risks:
                         strategy_data["risks"] = generated_risks
-                        print(f"[전략 합성 v3.1] ✅ 리스크 {len(generated_risks)}개 병합됨")
+                        print(f"[전략 합성 v3.1] 리스크 {len(generated_risks)}개 병합됨")
                     if generated_kpis:
                         strategy_data["kpis"] = generated_kpis
-                        print(f"[전략 합성 v3.1] ✅ KPI {len(generated_kpis)}개 병합됨")
+                        print(f"[전략 합성 v3.1] KPI {len(generated_kpis)}개 병합됨")
                     
-                    print("[전략 합성 v3.1] ✅ AI 분석 완료")
+                    print("[전략 합성 v3.1] AI 분석 완료")
                     deal_brief = _generate_deal_brief(strategy_data)
                     return {
                         "strategy": strategy_data, 
                         "status": "success",
-                        "message": "✅ AI 기반 전략 분석이 성공적으로 완료되었습니다."
+                        "message": "AI 기반 전략 분석이 성공적으로 완료되었습니다."
                     }
                 else:
-                    print("[전략 합성 v3.1] ⚠️ JSON 파싱 실패 → 폴백")
+                    print("[전략 합성 v3.1] 경고: JSON 파싱 실패 → 폴백")
             else:
-                print("[전략 합성 v3.1] ⚠️ LLM 응답 없음 → 폴백")
+                print("[전략 합성 v3.1] 경고: LLM 응답 없음 → 폴백")
         else:
-            print("[전략 합성 v3.1] ⚠️ LLM 미가용 → 폴백")
+            print("[전략 합성 v3.1] 경고: LLM 미가용 → 폴백")
 
         # 폴백 생성 (이미 상세하게 개선됨)
         print("[전략 합성 v3.1] 폴백 전략 사용 (상세 모드)")
@@ -933,18 +933,18 @@ def strategy_synthesizer(
         # 폴백에도 별도 생성된 리스크/KPI 병합
         if generated_risks:
             fb["risks"] = generated_risks
-            print(f"[전략 합성 v3.1] ✅ 폴백에 리스크 {len(generated_risks)}개 병합")
+            print(f"[전략 합성 v3.1] 폴백에 리스크 {len(generated_risks)}개 병합")
         if generated_kpis:
             fb["kpis"] = generated_kpis
-            print(f"[전략 합성 v3.1] ✅ 폴백에 KPI {len(generated_kpis)}개 병합")
+            print(f"[전략 합성 v3.1] 폴백에 KPI {len(generated_kpis)}개 병합")
         
         # LLM 미가용 이유 판단
         if not is_llm_available():
-            error_msg = "❌ AI 모델에 연결할 수 없습니다. API 키 설정을 확인하거나 네트워크 연결 상태를 점검해주세요."
+            error_msg = "오류: AI 모델에 연결할 수 없습니다. API 키 설정을 확인하거나 네트워크 연결 상태를 점검해주세요."
         elif not result_text:
-            error_msg = "❌ AI 모델이 응답하지 않았습니다. 잠시 후 다시 시도해주세요."
+            error_msg = "오류: AI 모델이 응답하지 않았습니다. 잠시 후 다시 시도해주세요."
         else:
-            error_msg = "❌ AI 응답을 JSON으로 파싱할 수 없습니다. AI 모델의 응답 형식이 올바르지 않습니다."
+            error_msg = "오류: AI 응답을 JSON으로 파싱할 수 없습니다. AI 모델의 응답 형식이 올바르지 않습니다."
         
         return {
             "strategy": fb, 
@@ -954,22 +954,22 @@ def strategy_synthesizer(
         }
 
     except Exception as e:
-        print(f"[전략 합성 v3.1] ❌ 예외 발생: {e}")
+        print(f"[전략 합성 v3.1] 오류: 예외 발생: {e}")
         fb = _fallback_strategy(norm_requirements, internal_matches, competitor_profiles)
         
         # 예외 케이스에도 리스크/KPI 병합
         if generated_risks:
             fb["risks"] = generated_risks
-            print(f"[전략 합성 v3.1] ✅ 예외 케이스에 리스크 {len(generated_risks)}개 병합")
+            print(f"[전략 합성 v3.1] 예외 케이스에 리스크 {len(generated_risks)}개 병합")
         if generated_kpis:
             fb["kpis"] = generated_kpis
-            print(f"[전략 합성 v3.1] ✅ 예외 케이스에 KPI {len(generated_kpis)}개 병합")
+            print(f"[전략 합성 v3.1] 예외 케이스에 KPI {len(generated_kpis)}개 병합")
         
         return {
             "strategy": fb, 
             "deal_brief": _generate_deal_brief(fb),
             "status": "error",
-            "message": f"❌ 오류 발생: {str(e)}. 전략을 생성할 수 없습니다."
+            "message": f"오류 발생: {str(e)}. 전략을 생성할 수 없습니다."
         }
 
 

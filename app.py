@@ -1601,9 +1601,9 @@ def render_strategy_detail_page():
                     if not has_prefix:
                         # 헤더가 없으면 강점/약점 분리 표시
                         if '강점' in counter_text:
-                            st.markdown(f"**▶ 강점 대응 {j}:**")
+                            st.markdown(f"**▶ 강점 대응:**")
                         elif '약점' in counter_text:
-                            st.markdown(f"**▲ 약점 활용 {j}:**")
+                            st.markdown(f"**▲ 약점 활용:**")
                         else:
                             st.markdown(f"**{j}.**")
                     
@@ -1614,7 +1614,7 @@ def render_strategy_detail_page():
         # 차별화 포인트
         differentiation = strategy_data.get('differentiation', [])
         if differentiation:
-            st.markdown("### ✨ 당사 차별화 포인트 (정량 검증)")
+            st.markdown("### 당사 차별화 포인트 (정량 검증)")
             for i, diff in enumerate(differentiation, 1):
                 # "차별화포인트 X:", "차별화 포인트 X:" 같은 접두어 제거
                 cleaned_diff = re.sub(r'^차별화\s*포인트\s*\d+\s*[:：]\s*', '', str(diff), flags=re.IGNORECASE)
@@ -1760,7 +1760,7 @@ def render_strategy_detail_page():
                 if proposal and isinstance(proposal, dict):
                     st.markdown(f"**◎ 기간:** {proposal.get('duration', 'N/A')}")
                     st.markdown(f"**• 목표:** {proposal.get('objective', 'N/A')}")
-                    st.markdown(f"**❓ 이유:** {proposal.get('why', 'N/A')}")
+                    st.markdown(f"**• 이유:** {proposal.get('why', 'N/A')}")
                     
                     deliverables = proposal.get('key_deliverables', [])
                     if deliverables:
@@ -1807,7 +1807,7 @@ def render_strategy_detail_page():
                         "No.": f"{risk.get('id', f'R{i}')}",
                         "레벨": f"{level_emoji} {level_text}",
                         "카테고리": risk.get('category', '-'),
-                        "리스크": risk.get('risk', '리스크 항목')[:60] + "..." if len(risk.get('risk', '')) > 60 else risk.get('risk', '리스크 항목'),
+                        "리스크": risk.get('risk', '리스크 항목'),
                         "가능성": likelihood,
                         "영향도": impact,
                         "대응 액션": ", ".join(risk.get('mitigation_action_ids', []) or ["-"])
@@ -1836,9 +1836,9 @@ def render_strategy_detail_page():
                 for i, risk in enumerate(risks, 1):
                     if isinstance(risk, dict):
                         risk_id = risk.get('id', f'R{i}')
-                        risk_name = risk.get('risk', '리스크 항목')[:50]
+                        risk_name = risk.get('risk', '리스크 항목')
                         
-                        with st.expander(f"[{risk_id}] {risk_name}...", expanded=False):
+                        with st.expander(f"[{risk_id}] {risk_name}", expanded=False):
                             st.markdown(f"**▷ 리스크 전문:** {risk.get('risk', 'N/A')}")
                             st.markdown(f"**◈ Plan A (예방):** {risk.get('mitigation', 'N/A')}")
                             
@@ -1906,9 +1906,9 @@ def render_strategy_detail_page():
                         "No.": st.column_config.NumberColumn("No.", width="small"),
                         "카테고리": st.column_config.TextColumn("카테고리", width="small"),
                         "KPI명": st.column_config.TextColumn("KPI명", width="medium"),
-                        "현재값 (Baseline)": st.column_config.TextColumn("▽ 현재값", width="medium"),
-                        "목표값 (Target)": st.column_config.TextColumn("△ 목표값", width="medium"),
-                        "측정 방법": st.column_config.TextColumn("▷ 측정 방법", width="large")
+                        "현재값 (Baseline)": st.column_config.TextColumn("현재값", width="medium"),
+                        "목표값 (Target)": st.column_config.TextColumn("목표값", width="medium"),
+                        "측정 방법": st.column_config.TextColumn("측정 방법", width="large")
                     }
                 )
                 
@@ -1923,7 +1923,7 @@ def render_strategy_detail_page():
     st.markdown("---")
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button("🔙 분석 결과로 돌아가기", use_container_width=True, type="primary", key="back_bottom"):
+        if st.button("← 분석 결과로 돌아가기", use_container_width=True, type="primary", key="back_bottom"):
             st.session_state.show_strategy_detail = False
             st.rerun()
 

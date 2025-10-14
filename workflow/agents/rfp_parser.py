@@ -97,21 +97,21 @@ def _generate_comparison_table(raw_docs: list) -> dict:
                     })
 
         if table_data:
-            print(f"[RFP Parser] ✅ 조견표 생성 완료 - {len(table_data)}개 항목")
+            print(f"[RFP Parser] 조견표 생성 완료 - {len(table_data)}개 항목")
             return {"table": table_data, "raw_text": result_text, "count": len(table_data)}
         else:
-            print(f"[RFP Parser] ⚠️ 조견표 파싱 실패 - 원본 텍스트 반환")
+            print(f"[RFP Parser] 경고: 조견표 파싱 실패 - 원본 텍스트 반환")
             return {"table": [], "raw_text": result_text, "count": 0}
 
     except Exception as e:
-        print(f"[RFP Parser] ❌ 조견표 생성 실패: {e}")
+        print(f"[RFP Parser] 오류: 조견표 생성 실패: {e}")
         return {"error": str(e)}
 
 
 def _summarize_with_ai(raw_results: dict) -> dict:
     """AI로 RFP 결과 요약"""
     if not is_llm_available():
-        print("[RFP Parser] ⚠️ LLM 없음 - fallback 적용")
+        print("[RFP Parser] 경고: LLM 없음 - fallback 적용")
         return _apply_smart_fallback(raw_results)
     
     summarized = {}
@@ -171,13 +171,13 @@ def _summarize_with_ai(raw_results: dict) -> dict:
                     lines = _filter_requirements(lines)
                 lines = filter_content(lines, category)
                 summarized[category] = lines
-                print(f"[RFP Parser] ✅ {category} 요약 완료 - {len(lines)}개")
+                print(f"[RFP Parser] {category} 요약 완료 - {len(lines)}개")
             else:
                 summarized[category] = _apply_smart_fallback_single(items, category)
-                print(f"[RFP Parser] ⚠️ {category} LLM 실패 - fallback 적용")
+                print(f"[RFP Parser] 경고: {category} LLM 실패 - fallback 적용")
                 
         except Exception as e:
-            print(f"[RFP Parser] ❌ {category} AI 호출 실패: {e}")
+            print(f"[RFP Parser] 오류: {category} AI 호출 실패: {e}")
             summarized[category] = _apply_smart_fallback_single(items, category)
 
     return summarized

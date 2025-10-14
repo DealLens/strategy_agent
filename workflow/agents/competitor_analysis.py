@@ -248,7 +248,7 @@ def extract_differentiation_points(company: str, swot: Dict) -> List[str]:
     for w in weaknesses:
         for key, counter in weakness_counters.items():
             if key in w.lower():
-                points.append(f"⚡ 우리 강점: {counter}")
+                points.append(f"우리 강점: {counter}")
                 break
     
     return points[:5]
@@ -338,7 +338,7 @@ def generate_swot(company: str, articles: List[Dict]) -> Dict[str, List[str]]:
             if summary and len(summary) > 10:
                 # 요약을 200자로 제한
                 summary_short = summary[:200] + "..." if len(summary) > 200 else summary
-                news_details.append(f"{i}. {title}\n   📄 {summary_short}")
+                news_details.append(f"{i}. {title}\n   요약: {summary_short}")
             else:
                 news_details.append(f"{i}. {title}")
         
@@ -355,30 +355,30 @@ def generate_swot(company: str, articles: List[Dict]) -> Dict[str, List[str]]:
 {news_text}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📌 SWOT 분석 작성 가이드:
+SWOT 분석 작성 가이드:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 위 뉴스에서 실제로 언급된 내용을 기반으로 구체적으로 작성하라:
 
-✅ S (Strengths - 강점): 4-6개
+S (Strengths - 강점): 4-6개
    - 실제 기술명, 제품명, 솔루션명 명시
    - 사업 규모, 매출, 시장 점유율 등 수치 포함
    - 예: "Brightics AI 플랫폼으로 데이터 분석 시장 점유율 35%"
    
-✅ W (Weaknesses - 약점): 3-5개
+W (Weaknesses - 약점): 3-5개
    - 구체적인 문제점 (비용, 속도, 인력, 기술 한계 등)
    - 예: "클라우드 구축 비용이 경쟁사 대비 25% 높음"
    
-✅ O (Opportunities - 기회): 3-5개
+O (Opportunities - 기회): 3-5개
    - 시장 트렌드, 정부 정책, 산업 변화
    - 예: "AI 규제 강화로 보안 솔루션 수요 급증"
    
-✅ T (Threats - 위협): 3-5개
+T (Threats - 위협): 3-5개
    - 경쟁 상황, 시장 변화, 리스크
    - 예: "네이버클라우드의 공격적 가격 정책"
 
-⚠️ 중요:
-- 추상적 표현 금지 (예: "우수한 기술력" ❌ → "GPT-4 기반 AI 챗봇 정확도 92%" ✅)
+중요:
+- 추상적 표현 금지 (예: "우수한 기술력" → "GPT-4 기반 AI 챗봇 정확도 92%")
 - 반드시 위 뉴스에서 언급된 실제 내용 활용
 - 기술명/제품명/사업명을 구체적으로 명시
 
@@ -419,10 +419,10 @@ def generate_swot(company: str, articles: List[Dict]) -> Dict[str, List[str]]:
             # 개선된 JSON 파싱 로직 사용
             swot_data = parse_json_response(result)
             if swot_data and _validate_swot_data(swot_data):
-                print(f"  ✅ {company} SWOT: S={len(swot_data.get('S', []))}개, W={len(swot_data.get('W', []))}개, O={len(swot_data.get('O', []))}개, T={len(swot_data.get('T', []))}개")
+                print(f"  완료 {company} SWOT: S={len(swot_data.get('S', []))}개, W={len(swot_data.get('W', []))}개, O={len(swot_data.get('O', []))}개, T={len(swot_data.get('T', []))}개")
                 return swot_data
     except Exception as e:
-        print(f"  ⚠️ {company} SWOT 생성 실패: {e}")
+        print(f"  경고 {company} SWOT 생성 실패: {e}")
     
     # Fallback
     return {
@@ -495,7 +495,7 @@ def generate_competitive_strategy(skax_profile: dict, competitors: list) -> list
     competitors_str = "\n".join(competitors_text)
     
     prompt = f"""
-🚨🚨🚨 CRITICAL: 각 경쟁사당 정확히 2개씩 (강점 대응 1개 + 약점 활용 1개) 총 6개 전략을 반드시 생성하라! 🚨🚨🚨
+중요: 각 경쟁사당 정확히 2개씩 (강점 대응 1개 + 약점 활용 1개) 총 6개 전략을 반드시 생성하라!
 
 너는 SK AX의 전략 컨설턴트다.
 아래 자사 역량과 경쟁사 SWOT을 분석하여 각 경쟁사별 대응전략 2개씩을 작성하라.
@@ -516,19 +516,19 @@ def generate_competitive_strategy(skax_profile: dict, competitors: list) -> list
 {competitors_str}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📋 작성 규칙 (반드시 준수!)
+작성 규칙 (반드시 준수!)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1️⃣ 각 경쟁사당 정확히 2개 작성:
-   - 첫 번째: "💪 강점 대응:" 으로 시작 (경쟁사의 강점에 대한 대응)
-   - 두 번째: "⚠️ 약점 활용:" 으로 시작 (경쟁사의 약점을 활용한 차별화)
+1. 각 경쟁사당 정확히 2개 작성:
+   - 첫 번째: "강점 대응:" 으로 시작 (경쟁사의 강점에 대한 대응)
+   - 두 번째: "약점 활용:" 으로 시작 (경쟁사의 약점을 활용한 차별화)
 
-2️⃣ 각 전략은 2-3문장으로 구성:
+2. 각 전략은 2-3문장으로 구성:
    - 경쟁사의 실제 강점/약점 명시
    - SK AX의 구체적 솔루션명 활용
    - 정량적 수치 포함 (예: 30% 절감, 40% 향상)
 
-3️⃣ 반드시 위 SWOT의 실제 내용 기반으로 작성
+3. 반드시 위 SWOT의 실제 내용 기반으로 작성
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 출력 형식 예시:
@@ -537,49 +537,49 @@ def generate_competitive_strategy(skax_profile: dict, competitors: list) -> list
 [
   {{
     "company": "삼성SDS",
-    "counter": "💪 강점 대응: 삼성SDS의 Brightics AI 플랫폼 데이터 분석 역량 → SK AX는 AccuInsight+와 DataRobot AutoML 통합으로 모델 개발 자동화율 45% 향상 + 분석 시간 50% 단축하여 대응. 중소기업 시장에서 접근성과 비용 효율성으로 차별화."
+    "counter": "강점 대응: 삼성SDS의 Brightics AI 플랫폼 데이터 분석 역량 → SK AX는 AccuInsight+와 DataRobot AutoML 통합으로 모델 개발 자동화율 45% 향상 + 분석 시간 50% 단축하여 대응. 중소기업 시장에서 접근성과 비용 효율성으로 차별화."
   }},
   {{
     "company": "삼성SDS",
-    "counter": "⚠️ 약점 활용: 삼성SDS의 높은 초기 구축 비용과 복잡한 의사결정 구조 → SK AX는 하이브리드 클라우드로 초기 투자 35% 절감 + 신속한 의사결정으로 프로젝트 착수 기간 40% 단축. 유연한 과금 모델로 중견기업 공략."
+    "counter": "약점 활용: 삼성SDS의 높은 초기 구축 비용과 복잡한 의사결정 구조 → SK AX는 하이브리드 클라우드로 초기 투자 35% 절감 + 신속한 의사결정으로 프로젝트 착수 기간 40% 단축. 유연한 과금 모델로 중견기업 공략."
   }},
   {{
     "company": "LG CNS",
-    "counter": "💪 강점 대응: (위 SWOT의 LG CNS 강점 기반으로 구체적 작성)"
+    "counter": "강점 대응: (위 SWOT의 LG CNS 강점 기반으로 구체적 작성)"
   }},
   {{
     "company": "LG CNS",
-    "counter": "⚠️ 약점 활용: (위 SWOT의 LG CNS 약점 기반으로 구체적 작성)"
+    "counter": "약점 활용: (위 SWOT의 LG CNS 약점 기반으로 구체적 작성)"
   }},
   {{
     "company": "현대오토에버",
-    "counter": "💪 강점 대응: (위 SWOT의 현대오토에버 강점 기반으로 구체적 작성)"
+    "counter": "강점 대응: (위 SWOT의 현대오토에버 강점 기반으로 구체적 작성)"
   }},
   {{
     "company": "현대오토에버",
-    "counter": "⚠️ 약점 활용: (위 SWOT의 현대오토에버 약점 기반으로 구체적 작성)"
+    "counter": "약점 활용: (위 SWOT의 현대오토에버 약점 기반으로 구체적 작성)"
   }}
 ]
 
-🚨 주의: 순수 JSON 배열만 출력! 설명/마크다운 제외!
-🚨 필수: 총 6개 항목 (각 경쟁사당 2개씩)!
+주의: 순수 JSON 배열만 출력! 설명/마크다운 제외!
+필수: 총 6개 항목 (각 경쟁사당 2개씩)!
 """
     
-    print(f"  🔥 경쟁사 대응 전략 생성 중... (경쟁사: {len(competitors)}개)")
+    print(f"  경쟁사 대응 전략 생성 중... (경쟁사: {len(competitors)}개)")
     response = call_llm(prompt, temperature=0.6, max_tokens=5000)
     
     # 디버깅: LLM 응답 확인
     if not response:
-        print(f"    ❌ LLM 응답 없음!")
+        print(f"    오류: LLM 응답 없음!")
         return []
     
-    print(f"    📝 LLM 응답 길이: {len(response)} 문자")
-    print(f"    📝 LLM 응답 미리보기: {response[:200]}...")
+    print(f"    LLM 응답 길이: {len(response)} 문자")
+    print(f"    LLM 응답 미리보기: {response[:200]}...")
     
     parsed = parse_json_response(response)
     
     if not parsed:
-        print(f"    ❌ JSON 파싱 실패!")
+        print(f"    오류: JSON 파싱 실패!")
         print(f"    원본 응답:\n{response[:500]}...")
         return []
     
@@ -620,7 +620,7 @@ def generate_competitive_strategy(skax_profile: dict, competitors: list) -> list
                 print(f"  [{i}] 경고 - 알 수 없는 경쟁사: '{company}'")
                 # 그래도 추가 (오타 가능성)
             
-            print(f"  [{i}] ✓ 추가: {company}")
+            print(f"  [{i}] 추가: {company}")
             result.append({"company": company, "counter": counter})
     
     elif isinstance(parsed, dict):
@@ -640,7 +640,7 @@ def generate_competitive_strategy(skax_profile: dict, competitors: list) -> list
                     result.append({"company": company, "counter": strategy_text})
     
     else:
-        print(f"    ❌ 예상치 못한 응답 형식: {type(parsed)}")
+        print(f"    오류: 예상치 못한 응답 형식: {type(parsed)}")
     
     # 각 경쟁사당 개수 확인
     company_counts = {}
@@ -650,13 +650,13 @@ def generate_competitive_strategy(skax_profile: dict, competitors: list) -> list
     
     print(f"[경쟁사 분석] 생성된 전략: {len(result)}개")
     for company, count in company_counts.items():
-        emoji = "✅" if count >= 2 else "⚠️"
-        print(f"    {emoji} {company}: {count}개")
+        status = "완료" if count >= 2 else "경고"
+        print(f"    {status} {company}: {count}개")
     
     # 경고: 각 경쟁사당 2개 미만인 경우
     for company in valid_companies:
         if company_counts.get(company, 0) < 2:
-            print(f"    ⚠️⚠️ {company}에 대한 전략이 {company_counts.get(company, 0)}개만 생성됨 (2개 필요)")
+            print(f"    경고: {company}에 대한 전략이 {company_counts.get(company, 0)}개만 생성됨 (2개 필요)")
     
     return result
 
@@ -719,7 +719,7 @@ def save_articles(company: str, articles: List[Dict]):
     with open(state_path, "w", encoding="utf-8") as f:
         json.dump({"last_crawled_at": datetime.now().isoformat()}, f, indent=2)
     
-    print(f"  ✅ {company}: 신규 {len(new_articles)}개 저장 (총 {len(combined)}개)")
+    print(f"  완료 {company}: 신규 {len(new_articles)}개 저장 (총 {len(combined)}개)")
 
 
 def load_articles(company: str) -> List[Dict]:
@@ -787,7 +787,7 @@ def competitor_analysis(update_data: bool = True) -> Dict[str, Any]:
         articles = load_articles(company)
         
         if not articles:
-            print(f"  ⚠️ {company}: 데이터 없음")
+            print(f"  경고: {company}: 데이터 없음")
             continue
         
         # SWOT 생성
@@ -812,13 +812,13 @@ def competitor_analysis(update_data: bool = True) -> Dict[str, Any]:
             "total_articles": len(articles)
         }
         
-        print(f"  ✅ {company}: {len(articles)}개 기사 분석 완료")
+        print(f"  완료: {company}: {len(articles)}개 기사 분석 완료")
     
     # 3) 경쟁 분석 요약
     print("\n[3/3] 경쟁 분석 요약 생성...")
     if len(profiles) >= 2:
         comparison_summary = generate_competitive_comparison(profiles)
-        print(f"  ✅ 경쟁 분석 완료")
+        print(f"  완료: 경쟁 분석 완료")
     
     print(f"\n{'='*60}")
     print(f"경쟁사 분석 완료: {len(profiles)}/{len(COMPETITORS)}개 기업")
