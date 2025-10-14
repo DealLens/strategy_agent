@@ -1254,7 +1254,7 @@ def render_strategy_report():
                     
                     # 회사 요약
                     if profile.get('company_summary'):
-                        st.markdown(f"**📝 요약:** {profile['company_summary'][:300]}...")
+                        st.markdown(f"**📝 요약:** {profile['company_summary']}")
                     
                     # SWOT
                     swot = profile.get('swot', {})

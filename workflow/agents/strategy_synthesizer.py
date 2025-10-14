@@ -141,10 +141,10 @@ def _format_competitors_for_prompt(competitor_profiles: Dict[str, Any]) -> str:
     lines = []
     for company, profile in items:
         swot = profile.get("swot", {})
-        s = _shorten(_to_text(swot.get("S")), 120)
-        w = _shorten(_to_text(swot.get("W")), 120)
-        o = _shorten(_to_text(swot.get("O")), 120)
-        t = _shorten(_to_text(swot.get("T")), 120)
+        s = _to_text(swot.get("S"))
+        w = _to_text(swot.get("W"))
+        o = _to_text(swot.get("O"))
+        t = _to_text(swot.get("T"))
         lines.append(f"### {company}\n  - S: {s}\n  - W: {w}\n  - O: {o}\n  - T: {t}")
     return "\n".join(lines)
 
@@ -185,17 +185,19 @@ def _generate_risks_and_kpis_with_ai(norm_requirements: List[Requirement]) -> Di
 너는 SK AX의 제안 전략 컨설턴트다.
 다음 RFP 요구사항을 기반으로 아래 리스크 템플릿과 KPI 템플릿을 구체적으로 채워라.
 
+⚠️ 중요: 이모지(📋, ⚖️, 📝, 📰, 💪, ⚠️, 🔥, ⚡ 등) 사용 절대 금지! 비즈니스 문서이므로 순수 텍스트만 사용하세요.
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📌 RFP 요구사항:
+RFP 요구사항:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {req_text}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎯 리스크 템플릿 (이것을 채워서 반환):
+리스크 템플릿 (이것을 채워서 반환):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {json.dumps(risk_template, ensure_ascii=False, indent=2)}
 
-⚠️ 작성 지침:
+작성 지침:
 - 각 카테고리별로 요구사항에서 실제 리스크를 구체적으로 작성
 - likelihood/impact: high|medium|low 중 선택
 - mitigation: "Plan A (예방): 1) ... → 2) ... → 3) ... → 4) ... → 5) ..." 형식으로 5단계
@@ -204,11 +206,11 @@ def _generate_risks_and_kpis_with_ai(norm_requirements: List[Requirement]) -> Di
 - mitigation_action_ids: 관련 액션 ID 배열 (예: ["A1", "A2"])
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📊 KPI 템플릿 (이것을 채워서 반환):
+KPI 템플릿 (이것을 채워서 반환):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 {json.dumps(kpi_template, ensure_ascii=False, indent=2)}
 
-⚠️ 작성 지침:
+작성 지침:
 - name: 요구사항에 맞는 구체적 KPI명
 - baseline: 현재값 + 경쟁사 비교 (예: "현재 85%, 경쟁사 평균 88%")
 - target: 목표값 + 개선률 + 시점 (예: "≥90% (5%p 향상, 2025년 12월)")

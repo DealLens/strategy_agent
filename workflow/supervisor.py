@@ -113,7 +113,7 @@ class ParallelSupervisor:
         # ---------------------
         results = await asyncio.gather(
             _run_tool(internal_rag, "internal_rag", {"requirements": requirements}),
-            _run_tool(competitor_analysis, "competitor_analysis", {"update_data": False}),
+            _run_tool(competitor_analysis, "competitor_analysis", {"update_data": True}),
             return_exceptions=False
         )
 
