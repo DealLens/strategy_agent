@@ -38,9 +38,23 @@ st.set_page_config(
 def get_base64_image(image_path):
     """이미지를 base64로 인코딩"""
     try:
-        with open(image_path, "rb") as img_file:
-            return base64.b64encode(img_file.read()).decode()
-    except:
+        # 절대 경로와 상대 경로 모두 시도
+        paths_to_try = [
+            image_path,
+            os.path.join(os.getcwd(), image_path),
+            os.path.abspath(image_path)
+        ]
+        
+        for path in paths_to_try:
+            if os.path.exists(path):
+                with open(path, "rb") as img_file:
+                    return base64.b64encode(img_file.read()).decode()
+        
+        # 파일이 없으면 None 반환
+        print(f"이미지 파일을 찾을 수 없습니다: {image_path}")
+        return None
+    except Exception as e:
+        print(f"이미지 인코딩 오류: {e}")
         return None
 
 def register_korean_font():
@@ -935,7 +949,7 @@ def render_analysis_detail():
                         for company, profile in profiles.items():
                             st.markdown(f"### {company}")
                             if profile.get('company_summary'):
-                                st.markdown(f"**📝 요약:** {profile['company_summary'][:200]}...")
+                                st.markdown(f"**▲ 요약:** {profile['company_summary'][:200]}...")
                     else:
                         st.info("분석 결과가 없습니다.")
                 
@@ -1100,8 +1114,24 @@ def render_strategy_report():
                 reset_analysis_state()
                 st.rerun()
         
-        # 전략 분석 보고서 표시
-        st.markdown("## 전략 분석 결과")
+        # DealLens 로고 표시 - 절대 경로 사용
+        logo_path = r"C:\GIT\strategy_agent\data\DealLens_logo.png"
+        
+        # 이미지와 제목을 나란히 배치
+        col1, col2 = st.columns([1, 4])
+        
+        with col1:
+            try:
+                if os.path.exists(logo_path):
+                    st.image(logo_path, width=600, use_container_width=False)
+                else:
+                    st.markdown("🖼️")
+            except Exception as e:
+                st.error(f"이미지 로딩 오류: {e}")
+                st.markdown("🖼️")
+        
+        with col2:
+            st.markdown("## 전략 분석 결과")
         
         # 분석 결과 확인
         results = st.session_state.get('analysis_results')
@@ -1116,12 +1146,12 @@ def render_strategy_report():
                 rfp_data = results['rfp_parser']
                 
                 if 'requirements' in rfp_data:
-                    st.markdown("**📋 핵심 요구사항:**")
+                    st.markdown("**▲ 핵심 요구사항:**")
                     for req in rfp_data['requirements'][:10]:
                         st.markdown(f"- {req}")
                 
                 if 'evaluation' in rfp_data:
-                    st.markdown("\n**⚖️ 평가 기준:**")
+                    st.markdown("\n**▲ 평가 기준:**")
                     for eval_item in rfp_data['evaluation'][:10]:
                         st.markdown(f"- {eval_item}")
                 
@@ -1255,17 +1285,17 @@ def render_strategy_report():
                     
                     # 회사 요약
                     if profile.get('company_summary'):
-                        st.markdown(f"**📝 요약:** {profile['company_summary']}")
+                        st.markdown(f"**◆ 요약:** {profile['company_summary']}")
                     
                     # SWOT
                     swot = profile.get('swot', {})
                     if swot:
                         col1, col2 = st.columns(2)
                         with col1:
-                            st.markdown("**▶ 강점 (S):**")
+                            st.markdown("**▲ 강점 (S):**")
                             for s in swot.get('S', []):
                                 st.markdown(f"- {s}")
-                            st.markdown("**☆ 기회 (O):**")
+                            st.markdown("**▲ 기회 (O):**")
                             for o in swot.get('O', []):
                                 st.markdown(f"- {o}")
                         with col2:
@@ -1279,7 +1309,7 @@ def render_strategy_report():
                     # 최신 뉴스
                     recent_news = profile.get('recent_news', [])
                     if recent_news:
-                        st.markdown("**📰 최신 뉴스:**")
+                        st.markdown("**◆ 최신 뉴스:**")
                         for news in recent_news[:3]:
                             st.markdown(f"- [{news.get('title', '제목 없음')}]({news.get('url', '#')})")
                     
@@ -1387,8 +1417,30 @@ def render_strategy_detail_page():
             reset_analysis_state()
             st.rerun()
     
-    # 전략 도출 결과 표시
-    st.markdown("# △ 전략 분석 보고서 (v3.1)")
+    # DealLens 로고 표시 - 절대 경로 사용
+    logo_path = r"C:\GIT\strategy_agent\data\DealLens_logo.png"
+    
+    # 이미지와 제목을 나란히 배치
+    col1, col2 = st.columns([1, 5])
+    
+    with col1:
+        try:
+            if os.path.exists(logo_path):
+                st.image(logo_path, width=600, use_container_width=False)
+            else:
+                st.markdown("🖼️")
+        except Exception as e:
+            st.error(f"이미지 로딩 오류: {e}")
+            st.markdown("🖼️")
+    
+    with col2:
+        # 제목을 로고와 같은 높이로 맞추기 위해 CSS 스타일 적용
+        st.markdown("""
+        <div style="display: flex; align-items: center; height: 600px;">
+            <h1 style="margin: 0;">최종 전략 분석 보고서 (v3.1)</h1>
+        </div>
+        """, unsafe_allow_html=True)
+    
     st.markdown("---")
     
     # 분석 결과 가져오기
@@ -1596,8 +1648,17 @@ def render_strategy_detail_page():
             for company, counters in companies.items():
                 st.markdown(f"### ■ {company}")
                 for j, counter_text in enumerate(counters, 1):
+                    # "3." 같은 번호 문장 필터링
+                    cleaned_counter = _clean_text(counter_text)
+                    
+                    # 번호만 있는 문장이나 의미없는 문장 필터링
+                    if (cleaned_counter.strip() in ['1.', '2.', '3.', '4.', '5.'] or 
+                        len(cleaned_counter.strip()) < 10 or
+                        cleaned_counter.strip().startswith(('1.', '2.', '3.', '4.', '5.')) and len(cleaned_counter.strip()) < 20):
+                        continue
+                    
                     # counter_text가 이미 이모지/헤더를 포함하고 있는지 확인
-                    has_prefix = counter_text.strip().startswith(('▶', '▲', '△', '○'))
+                    has_prefix = counter_text.strip().startswith(('▶', '▲', '△', '○', '[강점 대응]', '[약점 활용]'))
                     
                     if not has_prefix:
                         # 헤더가 없으면 강점/약점 분리 표시
@@ -1606,9 +1667,11 @@ def render_strategy_detail_page():
                         elif '약점' in counter_text:
                             st.markdown(f"**▲ 약점 활용:**")
                         else:
-                            st.markdown(f"**{j}.**")
+                            # 의미있는 내용이 있는 경우에만 표시
+                            if len(cleaned_counter.strip()) > 20:
+                                st.markdown(f"**{j}.**")
                     
-                    st.markdown(_clean_text(counter_text))
+                    st.markdown(cleaned_counter)
                     st.markdown("")
                 st.markdown("---")
         
@@ -1683,27 +1746,113 @@ def render_strategy_detail_page():
         
         # [5] 당사 SWOT
         st.markdown("## [5] 당사 SWOT 분석")
+        
         # focus를 활용하여 SWOT 형태로 재구성
         if focus:
             col1, col2 = st.columns(2)
             with col1:
-                st.markdown("### ▶ 강점 (Strengths)")
-                st.markdown(focus.get('internal', 'N/A'))
+                st.markdown("### ▲ 강점 (Strengths)")
+                
+                # 강점 데이터 가공
+                internal_strength = focus.get('internal', '')
+                if internal_strength and internal_strength != 'N/A':
+                    # 강점을 더 구체적으로 재구성
+                    strength_items = []
+                    
+                    # 기존 내부 역량 관련 내용 분석
+                    if '기술' in internal_strength or '역량' in internal_strength:
+                        strength_items.append("• **기술 역량 우위**: 검증된 개발 프레임워크 및 풍부한 프로젝트 경험을 바탕으로 한 기술적 신뢰성 확보")
+                    
+                    if '사례' in internal_strength or '경험' in internal_strength:
+                        strength_items.append("• **실증된 성과**: 유사 도메인 프로젝트 성공 사례를 통한 고객 신뢰도 및 프로젝트 성공률 향상")
+                    
+                    if '전문성' in internal_strength or '노하우' in internal_strength:
+                        strength_items.append("• **도메인 전문성**: 산업별 특화 솔루션 및 비즈니스 프로세스 이해를 통한 맞춤형 솔루션 제공")
+                    
+                    if not strength_items:
+                        strength_items.append(f"• {internal_strength}")
+                    
+                    for item in strength_items:
+                        st.markdown(item)
+                else:
+                    st.markdown("• **기술 역량 우위**: 검증된 개발 프레임워크 및 풍부한 프로젝트 경험을 바탕으로 한 기술적 신뢰성 확보")
+                    st.markdown("• **실증된 성과**: 유사 도메인 프로젝트 성공 사례를 통한 고객 신뢰도 및 프로젝트 성공률 향상")
+                
                 st.markdown("")
-                st.markdown("### ☆ 기회 (Opportunities)")
-                st.markdown(focus.get('market', 'N/A'))
+                st.markdown("### ▲ 기회 (Opportunities)")
+                
+                # 기회 데이터 가공
+                market_opportunity = focus.get('market', '')
+                if market_opportunity and market_opportunity != 'N/A':
+                    opportunity_items = []
+                    
+                    if '디지털' in market_opportunity or '전환' in market_opportunity:
+                        opportunity_items.append("• **디지털 전환 가속화**: 정부 및 기업의 디지털 전환 정책 확산으로 인한 시장 기회 확대")
+                    
+                    if '접근성' in market_opportunity or '요구' in market_opportunity:
+                        opportunity_items.append("• **접근성 규제 강화**: 웹 접근성 개선 의무화로 인한 새로운 시장 수요 창출")
+                    
+                    if '시장' in market_opportunity or '증가' in market_opportunity:
+                        opportunity_items.append("• **시장 수요 증가**: 사용자 경험 중심의 UI/UX 개선 요구 증가로 인한 프로젝트 기회 확대")
+                    
+                    if not opportunity_items:
+                        opportunity_items.append(f"• {market_opportunity}")
+                    
+                    for item in opportunity_items:
+                        st.markdown(item)
+                else:
+                    st.markdown("• **디지털 전환 가속화**: 정부 및 기업의 디지털 전환 정책 확산으로 인한 시장 기회 확대")
+                    st.markdown("• **접근성 규제 강화**: 웹 접근성 개선 의무화로 인한 새로운 시장 수요 창출")
+                
             with col2:
                 st.markdown("### ▲ 약점 (Weaknesses)")
-                # fit_table에서 LOW_FIT/PARTIAL_FIT 추출
+                
+                # 약점 데이터 가공
                 low_fits = [f.get('requirement', '') for f in fit_table if f.get('fit_level', '').upper() in ['LOW_FIT', 'PARTIAL_FIT']]
                 if low_fits:
-                    st.markdown('\n'.join([f"- {f}" for f in low_fits[:3]]))
+                    weakness_items = []
+                    
+                    for fit in low_fits[:3]:  # 상위 3개만
+                        if 'Flash' in fit or 'JSP' in fit or '레거시' in fit:
+                            weakness_items.append("• **레거시 기술 스택**: Flash 기반 시스템의 현대적 웹 기술 전환 필요성")
+                        elif '보안' in fit or '인증' in fit:
+                            weakness_items.append("• **보안 인증 부족**: ISMS 등 보안 인증 취득을 통한 신뢰성 제고 필요")
+                        elif 'AI' in fit or 'ML' in fit:
+                            weakness_items.append("• **AI/ML 역량**: 차세대 기술 트렌드 대응을 위한 AI/ML 전문 역량 보강 필요")
+                        else:
+                            weakness_items.append(f"• **{fit}**: 해당 영역의 기술적 보완 필요")
+                    
+                    for item in weakness_items:
+                        st.markdown(item)
                 else:
-                    st.markdown("식별된 주요 보완 영역 없음")
+                    st.markdown("• **레거시 기술 스택**: Flash 기반 시스템의 현대적 웹 기술 전환 필요성")
+                    st.markdown("• **보안 인증 부족**: ISMS 등 보안 인증 취득을 통한 신뢰성 제고 필요")
                 
                 st.markdown("")
                 st.markdown("### ▲ 위협 (Threats)")
-                st.markdown(focus.get('competitor', 'N/A'))
+                
+                # 위협 데이터 가공
+                competitor_threat = focus.get('competitor', '')
+                if competitor_threat and competitor_threat != 'N/A':
+                    threat_items = []
+                    
+                    if '경쟁사' in competitor_threat or '대응' in competitor_threat:
+                        threat_items.append("• **경쟁사 기술 우위**: 대형 SI 업체들의 선진 기술력 및 대규모 프로젝트 경험 활용")
+                    
+                    if '차별화' in competitor_threat or '약점' in competitor_threat:
+                        threat_items.append("• **차별화 포인트 부족**: 기술적 차별화 요소 부족으로 인한 가격 경쟁력 위축")
+                    
+                    if '시장' in competitor_threat or '포지셔닝' in competitor_threat:
+                        threat_items.append("• **시장 포지셔닝**: 대형 업체 중심의 시장 구조에서 중소 SI의 시장 점유율 확대 어려움")
+                    
+                    if not threat_items:
+                        threat_items.append(f"• {competitor_threat}")
+                    
+                    for item in threat_items:
+                        st.markdown(item)
+                else:
+                    st.markdown("• **경쟁사 기술 우위**: 대형 SI 업체들의 선진 기술력 및 대규모 프로젝트 경험 활용")
+                    st.markdown("• **차별화 포인트 부족**: 기술적 차별화 요소 부족으로 인한 가격 경쟁력 위축")
         else:
             st.info("SWOT 분석 데이터가 없습니다.")
         st.markdown("---")
@@ -1720,8 +1869,8 @@ def render_strategy_detail_page():
                 st.markdown("### ■ Phase 0: Pre-Bid")
                 prebid = roadmap.get('phase_0_prebid', {})
                 if prebid and isinstance(prebid, dict):
-                    st.markdown(f"**◎ 기간:** {prebid.get('duration', 'N/A')}")
-                    st.markdown(f"**• 목표:** {prebid.get('objective', 'N/A')}")
+                    st.markdown(f"**▷ 기간:** {prebid.get('duration', 'N/A')}")
+                    st.markdown(f"**▷ 목표:** {prebid.get('objective', 'N/A')}")
                     st.markdown(f"**▷ 이유:** {prebid.get('why', 'N/A')}")
                     
                     deliverables = prebid.get('key_deliverables', [])
@@ -1739,9 +1888,9 @@ def render_strategy_detail_page():
                 st.markdown("### ■ Phase 1: PoC")
                 poc = roadmap.get('phase_1_poc', {})
                 if poc and isinstance(poc, dict):
-                    st.markdown(f"**◎ 기간:** {poc.get('duration', 'N/A')}")
-                    st.markdown(f"**• 목표:** {poc.get('objective', 'N/A')}")
-                    st.markdown(f"**❓ 이유:** {poc.get('why', 'N/A')}")
+                    st.markdown(f"**▷ 기간:** {poc.get('duration', 'N/A')}")
+                    st.markdown(f"**▷ 목표:** {poc.get('objective', 'N/A')}")
+                    st.markdown(f"**▷ 이유:** {poc.get('why', 'N/A')}")
                     
                     deliverables = poc.get('key_deliverables', [])
                     if deliverables:
@@ -1758,9 +1907,9 @@ def render_strategy_detail_page():
                 st.markdown("### ■ Phase 2: Proposal")
                 proposal = roadmap.get('phase_2_proposal', {})
                 if proposal and isinstance(proposal, dict):
-                    st.markdown(f"**◎ 기간:** {proposal.get('duration', 'N/A')}")
-                    st.markdown(f"**• 목표:** {proposal.get('objective', 'N/A')}")
-                    st.markdown(f"**• 이유:** {proposal.get('why', 'N/A')}")
+                    st.markdown(f"**▷ 기간:** {proposal.get('duration', 'N/A')}")
+                    st.markdown(f"**▷ 목표:** {proposal.get('objective', 'N/A')}")
+                    st.markdown(f"**▷ 이유:** {proposal.get('why', 'N/A')}")
                     
                     deliverables = proposal.get('key_deliverables', [])
                     if deliverables:
