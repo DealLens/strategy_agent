@@ -18,6 +18,7 @@ from io import BytesIO
 
 # Supervisor import
 from workflow.supervisor import ParallelSupervisor, llm
+from workflow.agents.strategy_synthesizer import _clean_text
 
 # 환경변수 로드
 load_dotenv()
@@ -168,15 +169,15 @@ def generate_analysis_pdf():
             for i, action in enumerate(actions[:8], 1):  # 상위 8개만
                 if isinstance(action, dict):
                     action_title = action.get('action', f'액션 {i}')
-                    story.append(Paragraph(f"[A{i}] {action_title}", heading2_style))
+                    story.append(Paragraph(f"{action_title}", heading2_style))
                     
                     why = action.get('why', '')
                     if why:
-                        story.append(Paragraph(f"▷ 이유: {why[:300]}", bullet_style))
+                        story.append(Paragraph(f"▷ 이유: {_clean_text(why)[:300]}", bullet_style))
                     
                     how = action.get('how', '')
                     if how:
-                        story.append(Paragraph(f"◇ 방법: {how[:300]}", bullet_style))
+                        story.append(Paragraph(f"◇ 방법: {_clean_text(how)[:300]}", bullet_style))
                     
                     story.append(Spacer(1, 8))
         
@@ -199,7 +200,7 @@ def generate_analysis_pdf():
             for company, counters in companies.items():
                 story.append(Paragraph(f"■ {company}", heading2_style))
                 for j, counter_text in enumerate(counters[:3], 1):  # 상위 3개만
-                    story.append(Paragraph(f"{j}. {counter_text[:400]}", bullet_style))
+                    story.append(Paragraph(f"{j}. {_clean_text(counter_text)[:400]}", bullet_style))
                 story.append(Spacer(1, 8))
         
         # === [4] 리스크 ===
@@ -1607,7 +1608,7 @@ def render_strategy_detail_page():
                         else:
                             st.markdown(f"**{j}.**")
                     
-                    st.markdown(counter_text)
+                    st.markdown(_clean_text(counter_text))
                     st.markdown("")
                 st.markdown("---")
         
@@ -1618,7 +1619,7 @@ def render_strategy_detail_page():
             for i, diff in enumerate(differentiation, 1):
                 # "차별화포인트 X:", "차별화 포인트 X:" 같은 접두어 제거
                 cleaned_diff = re.sub(r'^차별화\s*포인트\s*\d+\s*[:：]\s*', '', str(diff), flags=re.IGNORECASE)
-                st.markdown(f"**{i}.** {cleaned_diff}")
+                st.markdown(f"**{i}.** {_clean_text(cleaned_diff)}")
         
         if not competitor_counters and not differentiation:
             st.info("경쟁사 대응 전략 데이터가 없습니다.")
@@ -1637,18 +1638,17 @@ def render_strategy_detail_page():
                     effort = action.get('effort', 'medium').upper()
                     
                     priority_badge = "▲" if impact == "HIGH" and urgency == "HIGH" else "▸" if urgency == "HIGH" else "◆"
-                    action_id = action.get('id', f'A{i}')
                     
-                    st.markdown(f"### {priority_badge} [{action_id}] {action.get('action', '액션 항목')}")
+                    st.markdown(f"### {priority_badge} {action.get('action', '액션 항목')}")
                     
                     col1, col2 = st.columns([2, 1])
                     with col1:
-                        st.markdown(f"**▷ 이유(Why):** {action.get('why', 'N/A')}")
+                        st.markdown(f"**▷ 이유(Why):** {_clean_text(action.get('why', 'N/A'))}")
                         
                         # 방법(How)
                         how = action.get('how', '')
                         if how:
-                            st.markdown(f"**◇ 방법(How):** {how}")
+                            st.markdown(f"**◇ 방법(How):** {_clean_text(how)}")
                         
                         # 전략 접근법
                         strategy_approach = action.get('strategy_approach', '')
@@ -1667,7 +1667,7 @@ def render_strategy_detail_page():
                         # 기대 결과 (수치화)
                         expected_result = action.get('expected_result', '')
                         if expected_result:
-                            st.markdown(f"**▶ 기대 결과:** {expected_result}")
+                            st.markdown(f"**▶ 기대 결과:** {_clean_text(expected_result)}")
                     
                     with col2:
                         st.markdown(f"**Impact:** `{impact}`")
