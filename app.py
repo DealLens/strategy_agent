@@ -1421,11 +1421,12 @@ def render_strategy_detail_page():
     logo_path = r"C:\GIT\strategy_agent\data\DealLens_logo.png"
     
     # 이미지와 제목을 나란히 배치
-    col1, col2 = st.columns([1, 5])
+    col1, col2 = st.columns([1, 2])
     
     with col1:
         try:
             if os.path.exists(logo_path):
+                # 로고 크기를 600px로 설정
                 st.image(logo_path, width=600, use_container_width=False)
             else:
                 st.markdown("🖼️")
@@ -1436,9 +1437,13 @@ def render_strategy_detail_page():
     with col2:
         # 제목을 로고와 같은 높이로 맞추기 위해 CSS 스타일 적용
         st.markdown("""
-        <div style="display: flex; align-items: center; height: 600px;">
-            <h1 style="margin: 0;">최종 전략 분석 보고서 (v3.1)</h1>
+
+        <div style="display: flex; justify-content: center; align-items: center; height: 200px;">
+    <h1 style="font-size: 2.2rem; margin: 0; text-align: center;">
+        최종 전략 분석 보고서
+        </h1>
         </div>
+
         """, unsafe_allow_html=True)
     
     st.markdown("---")
@@ -1647,31 +1652,69 @@ def render_strategy_detail_page():
             
             for company, counters in companies.items():
                 st.markdown(f"### ■ {company}")
-                for j, counter_text in enumerate(counters, 1):
-                    # "3." 같은 번호 문장 필터링
-                    cleaned_counter = _clean_text(counter_text)
+                
+                # 중복 제거: 같은 유형(강점/약점) 전략이 중복되면 제거
+                filtered_counters = []
+                seen_types = set()
+                
+                for counter_text in counters:
+                    # 강점/약점 유형 판별
+                    if '[강점 대응]' in counter_text or '강점 대응:' in counter_text:
+                        strategy_type = 'strength'
+                    elif '[약점 활용]' in counter_text or '약점 활용:' in counter_text:
+                        strategy_type = 'weakness'
+                    else:
+                        strategy_type = 'other'
                     
-                    # 번호만 있는 문장이나 의미없는 문장 필터링
-                    if (cleaned_counter.strip() in ['1.', '2.', '3.', '4.', '5.'] or 
-                        len(cleaned_counter.strip()) < 10 or
-                        cleaned_counter.strip().startswith(('1.', '2.', '3.', '4.', '5.')) and len(cleaned_counter.strip()) < 20):
+                    # 같은 유형이 이미 있으면 스킵
+                    if strategy_type in seen_types and strategy_type != 'other':
                         continue
                     
-                    # counter_text가 이미 이모지/헤더를 포함하고 있는지 확인
-                    has_prefix = counter_text.strip().startswith(('▶', '▲', '△', '○', '[강점 대응]', '[약점 활용]'))
+                    seen_types.add(strategy_type)
+                    filtered_counters.append(counter_text)
                     
-                    if not has_prefix:
-                        # 헤더가 없으면 강점/약점 분리 표시
-                        if '강점' in counter_text:
-                            st.markdown(f"**▶ 강점 대응:**")
-                        elif '약점' in counter_text:
-                            st.markdown(f"**▲ 약점 활용:**")
-                        else:
-                            # 의미있는 내용이 있는 경우에만 표시
-                            if len(cleaned_counter.strip()) > 20:
-                                st.markdown(f"**{j}.**")
+                    # 최대 2개까지만
+                    if len(filtered_counters) >= 2:
+                        break
+                
+                for counter_text in filtered_counters:
+                    # "3." 같은 번호 문장 완전 필터링 (더 강력하게)
+                    if (counter_text.strip() in ['1.', '2.', '3.', '4.', '5.'] or 
+                        counter_text.strip().startswith(('1.', '2.', '3.', '4.', '5.')) or
+                        '3.' in counter_text.strip() or
+                        counter_text.strip().startswith('3.') or
+                        '3.\n' in counter_text or
+                        '\n3.' in counter_text):
+                        continue
                     
-                    st.markdown(cleaned_counter)
+                    # _clean_text 적용
+                    cleaned_counter = _clean_text(counter_text)
+                    
+                    # cleaned_counter가 비어있거나 "3."이 포함되어 있으면 스킵
+                    if (not cleaned_counter or 
+                        len(cleaned_counter.strip()) < 10 or
+                        '3.' in cleaned_counter.strip()):
+                        continue
+                    
+                    # 이미 이모지/헤더가 포함된 텍스트인지 확인
+                    has_prefix = (counter_text.strip().startswith(('▶', '▲', '△', '○', '[강점 대응]', '[약점 활용]')) or
+                                 '[강점 대응]' in counter_text or '[약점 활용]' in counter_text or
+                                 '▶' in counter_text or '▲' in counter_text)
+                    
+                    # 번호 표시하지 않음 (깔끔한 표시를 위해)
+                    
+                    # 텍스트 변환: "강점 대응:" → "▶ **강점 대응**:", "약점 활용:" → "▲ **약점 활용**:"
+                    display_text = cleaned_counter
+                    if display_text.startswith("강점 대응:") and not display_text.startswith("▶"):
+                        display_text = "▶ **강점 대응**: " + display_text.replace("강점 대응: ", "")
+                    elif display_text.startswith("약점 활용:") and not display_text.startswith("▲"):
+                        display_text = "▲ **약점 활용**: " + display_text.replace("약점 활용: ", "")
+                    elif display_text.startswith("▶ 강점 대응:") and not "**" in display_text:
+                        display_text = display_text.replace("▶ 강점 대응:", "▶ **강점 대응**:")
+                    elif display_text.startswith("▲ 약점 활용:") and not "**" in display_text:
+                        display_text = display_text.replace("▲ 약점 활용:", "▲ **약점 활용**:")
+                    
+                    st.markdown(display_text)
                     st.markdown("")
                 st.markdown("---")
         

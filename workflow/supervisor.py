@@ -249,9 +249,8 @@ class ParallelSupervisor:
                 if not isinstance(appendix, dict):
                     appendix = {}
                 
-                # 기존 competitor_counters와 병합
-                existing_counters = appendix.get("competitor_counters", [])
-                appendix["competitor_counters"] = competitive_strategies + existing_counters
+                # competitor_analysis에서 생성된 전략만 사용 (중복 방지)
+                appendix["competitor_counters"] = competitive_strategies
                 strategy_data["appendix"] = appendix
                 strategy_result["strategy"] = strategy_data
                 
