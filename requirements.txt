@@ -20,7 +20,13 @@ pymupdf              # PyMuPDF → PDF 로딩
 pypdf                # PDF parsing 보조
 tiktoken             # 토큰 카운팅
 
-# 🔹 Utilities
-duckduckgo-search    # 경쟁사 웹검색 확장 가능
-tqdm                 # 진행상황 표시
+# 🔹 Web & Network
+requests             # HTTP 요청
 requests-cache       # HTTP 캐싱
+urllib3              # HTTP 클라이언트 (retry 설정)
+beautifulsoup4       # HTML 파싱
+lxml                 # BeautifulSoup용 빠른 파서
+
+# 🔹 Utilities
+duckduckgo-search    # 경쟁사 웹검색
+tqdm                 # 진행상황 표시
