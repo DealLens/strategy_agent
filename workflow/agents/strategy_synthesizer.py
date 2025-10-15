@@ -996,6 +996,62 @@ def _generate_deal_brief(strategy: Dict[str, Any]) -> str:
         if not counters:
             return ["- (경쟁사 분석 데이터 없음)"]
         
+        # 회사명 익명화 함수 (더 강력한 버전)
+        def sanitize_company_names(text: str) -> str:
+            """생성된 텍스트에서 실제 회사명을 익명화된 이름으로 교체"""
+            if not text:
+                return text
+            
+            # 실제 회사명을 익명화된 이름으로 교체 (수정된 매핑)
+            replacements = {
+                # 삼성SDS 관련
+                "삼성SDS": "A사",
+                "삼성 SDS": "A사",
+                "SAMSUNG SDS": "A사",
+                "Samsung SDS": "A사",
+                
+                # LG CNS 관련
+                "LG CNS": "B사",
+                "LGCNS": "B사",
+                "LG-CNS": "B사",
+                
+                # 현대오토에버 관련
+                "현대오토에버": "C사",
+                "HYUNDAI AUTOEVER": "C사",
+                "AutoEver": "C사"
+            }
+            
+            sanitized_text = text
+            for real_name, anonymous_name in replacements.items():
+                sanitized_text = sanitized_text.replace(real_name, anonymous_name)
+            
+            return sanitized_text
+        
+        # 강력한 익명화 함수 (정규식 사용)
+        def force_anonymize(text: str) -> str:
+            """정규식을 사용한 강력한 익명화"""
+            import re
+            
+            # 삼성SDS 관련 패턴
+            text = re.sub(r'삼성\s*SDS?', 'A사', text, flags=re.IGNORECASE)
+            text = re.sub(r'SAMSUNG\s*SDS?', 'A사', text, flags=re.IGNORECASE)
+            text = re.sub(r'^SDS$', 'A사', text, flags=re.IGNORECASE)
+            
+            # LG CNS 관련 패턴
+            text = re.sub(r'LG\s*CNS?', 'B사', text, flags=re.IGNORECASE)
+            text = re.sub(r'LG\s*C&S', 'B사', text, flags=re.IGNORECASE)
+            text = re.sub(r'LGCNS?', 'B사', text, flags=re.IGNORECASE)
+            text = re.sub(r'^CNS$', 'B사', text, flags=re.IGNORECASE)
+            
+            # 현대오토에버 관련 패턴
+            text = re.sub(r'현대\s*오토에버', 'C사', text, flags=re.IGNORECASE)
+            text = re.sub(r'HYUNDAI\s*AUTOEVER', 'C사', text, flags=re.IGNORECASE)
+            text = re.sub(r'^AUTOEVER$', 'C사', text, flags=re.IGNORECASE)
+            text = re.sub(r'^AutoEver$', 'C사', text, flags=re.IGNORECASE)
+            text = re.sub(r'^오토에버$', 'C사', text, flags=re.IGNORECASE)
+            
+            return text
+        
         # 다양한 라벨 형식을 처리하는 정규식 패턴
         strength_patterns = [
             r'\[강점 대응\]',
@@ -1036,6 +1092,10 @@ def _generate_deal_brief(strategy: Dict[str, Any]) -> str:
                     clean_text = re.sub(pattern, '', text).strip()
                     # 불필요한 기호와 증빙 수치 제거
                     clean_text = _clean_text(clean_text)
+                    # 회사명 익명화 적용 (더 강력한 익명화)
+                    clean_text = sanitize_company_names(clean_text)
+                    clean_text = sanitize_company_names(clean_text)  # 두 번 적용
+                    clean_text = force_anonymize(clean_text)  # 정규식으로 강제 익명화
                     return clean_text
             return ""
         
@@ -1047,6 +1107,23 @@ def _generate_deal_brief(strategy: Dict[str, Any]) -> str:
             company = counter.get("company", "")
             counter_text = counter.get("counter", "")
             if company and counter_text:
+                # 회사명도 익명화 적용 (더 강력한 익명화)
+                company = sanitize_company_names(company)
+                company = sanitize_company_names(company)  # 두 번 적용
+                company = force_anonymize(company)  # 정규식으로 강제 익명화
+                
+                counter_text = sanitize_company_names(counter_text)
+                counter_text = sanitize_company_names(counter_text)  # 두 번 적용
+                counter_text = force_anonymize(counter_text)  # 정규식으로 강제 익명화
+                
+                # 실제 회사명이 여전히 남아있는 경우 강제 변환
+                if "삼성SDS" in company or "삼성 SDS" in company or "SAMSUNG SDS" in company or "SDS" in company:
+                    company = "A사"
+                elif "LG CNS" in company or "LG C&S" in company or "LGCNS" in company or "CNS" in company:
+                    company = "B사"
+                elif "현대오토에버" in company or "현대 오토에버" in company or "HYUNDAI AUTOEVER" in company or "AutoEver" in company or "오토에버" in company:
+                    company = "C사"
+                
                 if company not in by_company:
                     by_company[company] = {"strengths": set(), "weaknesses": set()}
                 
@@ -1064,8 +1141,20 @@ def _generate_deal_brief(strategy: Dict[str, Any]) -> str:
             # 강점이나 약점이 하나도 없으면 해당 기업 생략
             if not strategies["strengths"] and not strategies["weaknesses"]:
                 continue
+            
+            # 회사명을 최종적으로 익명화 (혹시 놓친 부분이 있을 수 있음)
+            final_company = sanitize_company_names(company)
+            final_company = force_anonymize(final_company)
+            
+            # 실제 회사명이 여전히 남아있는 경우 강제 변환
+            if "삼성SDS" in final_company or "삼성 SDS" in final_company or "SAMSUNG SDS" in final_company or "SDS" in final_company:
+                final_company = "A사"
+            elif "LG CNS" in final_company or "LG C&S" in final_company or "LGCNS" in final_company or "CNS" in final_company:
+                final_company = "B사"
+            elif "현대오토에버" in final_company or "현대 오토에버" in final_company or "HYUNDAI AUTOEVER" in final_company or "AutoEver" in final_company or "오토에버" in final_company:
+                final_company = "C사"
                 
-            out.append(f"■ {company}")
+            out.append(f"■ {final_company}")
             
             # 강점 대응들이 있으면 출력 (라벨 없이)
             if strategies["strengths"]:

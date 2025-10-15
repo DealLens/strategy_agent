@@ -212,6 +212,7 @@ def generate_analysis_pdf():
                 companies[company].append(counter.get('counter', 'N/A'))
             
             for company, counters in companies.items():
+                # 이미 익명화된 이름이므로 그대로 사용
                 story.append(Paragraph(f"■ {company}", heading2_style))
                 for j, counter_text in enumerate(counters[:3], 1):  # 상위 3개만
                     story.append(Paragraph(f"{j}. {_clean_text(counter_text)[:400]}", bullet_style))
@@ -947,6 +948,7 @@ def render_analysis_detail():
                         competitor_data = results['competitor_analysis']
                         profiles = competitor_data.get('competitor_profiles', {})
                         for company, profile in profiles.items():
+                            # 이미 익명화된 이름이므로 그대로 사용
                             st.markdown(f"### {company}")
                             if profile.get('company_summary'):
                                 st.markdown(f"**▲ 요약:** {profile['company_summary'][:200]}...")
@@ -1114,24 +1116,34 @@ def render_strategy_report():
                 reset_analysis_state()
                 st.rerun()
         
-        # DealLens 로고 표시 - 절대 경로 사용
-        logo_path = r"C:\GIT\strategy_agent\data\DealLens_logo.png"
+        # DealLens 로고와 제목을 중앙 정렬로 배치 (로고를 글자 위에)
+        # 로고를 base64로 인코딩해서 사용
+        logo_base64 = get_base64_image("data/DealLens_logo1.png")
+        if logo_base64:
+            st.markdown(f"""
+<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; margin-top: 20px;">
+            <img src="data:image/png;base64,{logo_base64}" alt="DealLens Logo" style="height: 90px; margin-bottom: 5px;">
+    <h1 style="font-size: 2.2rem; font-weight: 700; color: #1E293B; margin: 0; text-align: center; white-space: nowrap;">
+        최종 전략 분석 보고서
+    </h1>
+</div>
+<hr style="margin: 20px 0 30px 0; border: 0.5px solid #e2e2e2;">
+""", unsafe_allow_html=True)
+        else:
+            st.markdown("""
+<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; margin-top: 20px;">
+        <div style="height: 90px; width: 90px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
+            <span style="color: white; font-size: 2.25rem; font-weight: bold;">DL</span>
+    </div>
+    <h1 style="font-size: 2.2rem; font-weight: 700; color: #1E293B; margin: 0; text-align: center; white-space: nowrap;">
+        최종 전략 분석 보고서
+    </h1>
+</div>
+<hr style="margin: 20px 0 30px 0; border: 0.5px solid #e2e2e2;">
+""", unsafe_allow_html=True)
         
-        # 이미지와 제목을 나란히 배치
-        col1, col2 = st.columns([1, 4])
-        
-        with col1:
-            try:
-                if os.path.exists(logo_path):
-                    st.image(logo_path, width=600, use_container_width=False)
-                else:
-                    st.markdown("🖼️")
-            except Exception as e:
-                st.error(f"이미지 로딩 오류: {e}")
-                st.markdown("🖼️")
-        
-        with col2:
-            st.markdown("## 전략 분석 결과")
+        # 여백 추가
+        st.markdown("<br><br>", unsafe_allow_html=True)
         
         # 분석 결과 확인
         results = st.session_state.get('analysis_results')
@@ -1281,6 +1293,7 @@ def render_strategy_report():
                 profiles = competitor_data.get('competitor_profiles', {})
                 
                 for company, profile in profiles.items():
+                    # 이미 익명화된 이름이므로 그대로 사용
                     st.markdown(f"### {company}")
                     
                     # 회사 요약
@@ -1417,36 +1430,34 @@ def render_strategy_detail_page():
             reset_analysis_state()
             st.rerun()
     
-    # DealLens 로고 표시 - 절대 경로 사용
-    logo_path = r"C:\GIT\strategy_agent\data\DealLens_logo.png"
-    
-    # 이미지와 제목을 나란히 배치
-    col1, col2 = st.columns([1, 2])
-    
-    with col1:
-        try:
-            if os.path.exists(logo_path):
-                # 로고 크기를 600px로 설정
-                st.image(logo_path, width=600, use_container_width=False)
-            else:
-                st.markdown("🖼️")
-        except Exception as e:
-            st.error(f"이미지 로딩 오류: {e}")
-            st.markdown("🖼️")
-    
-    with col2:
-        # 제목을 로고와 같은 높이로 맞추기 위해 CSS 스타일 적용
-        st.markdown("""
-
-        <div style="display: flex; justify-content: center; align-items: center; height: 200px;">
-    <h1 style="font-size: 2.2rem; margin: 0; text-align: center;">
+    # DealLens 로고와 제목을 중앙 정렬로 배치 (로고를 글자 위에)
+    # 로고를 base64로 인코딩해서 사용
+    logo_base64 = get_base64_image("data/DealLens_logo1.png")
+    if logo_base64:
+        st.markdown(f"""
+<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; margin-top: 20px;">
+            <img src="data:image/png;base64,{logo_base64}" alt="DealLens Logo" style="height: 90px; margin-bottom: 5px;">
+    <h1 style="font-size: 2.2rem; font-weight: 700; color: #1E293B; margin: 0; text-align: center; white-space: nowrap;">
         최종 전략 분석 보고서
-        </h1>
-        </div>
-
-        """, unsafe_allow_html=True)
+    </h1>
+</div>
+<hr style="margin: 20px 0 30px 0; border: 0.5px solid #e2e2e2;">
+""", unsafe_allow_html=True)
+    else:
+        st.markdown("""
+<div style="display: flex; flex-direction: column; justify-content: center; align-items: center; margin-top: 20px;">
+        <div style="height: 90px; width: 90px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
+            <span style="color: white; font-size: 2.25rem; font-weight: bold;">DL</span>
+    </div>
+    <h1 style="font-size: 2.2rem; font-weight: 700; color: #1E293B; margin: 0; text-align: center; white-space: nowrap;">
+        최종 전략 분석 보고서
+    </h1>
+</div>
+<hr style="margin: 20px 0 30px 0; border: 0.5px solid #e2e2e2;">
+""", unsafe_allow_html=True)
     
-    st.markdown("---")
+    # # 여백 추가
+    # st.markdown("<br><br><br><br><br><br>", unsafe_allow_html=True)
     
     # 분석 결과 가져오기
     results = st.session_state.get('analysis_results')
@@ -1512,11 +1523,11 @@ def render_strategy_detail_page():
                 with col2:
                     st.markdown("**당사**")
                 with col3:
-                    st.markdown("**삼성 SDS**")
+                    st.markdown("**A사**")
                 with col4:
-                    st.markdown("**LG CNS**")
+                    st.markdown("**B사**")
                 with col5:
-                    st.markdown("**현대오토에버**")
+                    st.markdown("**C사**")
                 
                 st.markdown("---")
                 
@@ -1527,11 +1538,11 @@ def render_strategy_detail_page():
                 with col2:
                     st.success(row.get('당사', '-'))
                 with col3:
-                    st.markdown(row.get('삼성 SDS', '-'))
+                    st.markdown(row.get('A사', '-'))
                 with col4:
-                    st.markdown(row.get('LG CNS', '-'))
+                    st.markdown(row.get('B사', '-'))
                 with col5:
-                    st.markdown(row.get('현대오토에버', '-'))
+                    st.markdown(row.get('C사', '-'))
                 
                 # 당사 우위 강조
                 advantage = row.get('당사 우위', '')
@@ -1651,6 +1662,7 @@ def render_strategy_detail_page():
                 companies[company].append(counter.get('counter', 'N/A'))
             
             for company, counters in companies.items():
+                # 이미 익명화된 이름이므로 그대로 사용
                 st.markdown(f"### ■ {company}")
                 
                 # 중복 제거: 같은 유형(강점/약점) 전략이 중복되면 제거

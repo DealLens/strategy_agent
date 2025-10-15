@@ -35,8 +35,63 @@ llm_client = get_llm_client()
 COMPANY_DIR = os.path.join(PROJECT_ROOT, "data", "company")
 os.makedirs(COMPANY_DIR, exist_ok=True)
 
-# 3사 고정
-COMPETITORS = ["삼성SDS", "LG CNS", "현대오토에버"]
+# 3사 고정 - 실제 회사명과 익명화 매핑 통합
+COMPETITORS = ["lg_cns", "삼성sds", "현대오토에버"]
+
+# 실제 회사명과 익명화된 이름 매핑
+COMPANY_MAPPING = {
+    # 파일명 기준 (키)
+    "lg_cns": "B사",
+    "삼성sds": "A사", 
+    "현대오토에버": "C사",
+    # 실제 회사명 기준 (크롤링 시 사용)
+    "LG CNS": "B사",
+    "삼성SDS": "A사",
+    "현대오토에버": "C사"
+}
+
+def get_anonymous_name(company: str) -> str:
+    """실제 회사명을 익명화된 이름으로 변환"""
+    return COMPANY_MAPPING.get(company, company)
+
+def get_real_company_name(company_key: str) -> str:
+    """파일명 키를 실제 회사명으로 변환"""
+    real_name_mapping = {
+        "lg_cns": "LG CNS",
+        "삼성sds": "삼성SDS", 
+        "현대오토에버": "현대오토에버"
+    }
+    return real_name_mapping.get(company_key, company_key)
+
+def sanitize_company_names(text: str) -> str:
+    """생성된 텍스트에서 실제 회사명을 익명화된 이름으로 교체"""
+    if not text:
+        return text
+    
+    # 실제 회사명을 익명화된 이름으로 교체 (수정된 매핑)
+    replacements = {
+        # 삼성SDS 관련
+        "삼성SDS": "A사",
+        "삼성 SDS": "A사",
+        "SAMSUNG SDS": "A사",
+        "Samsung SDS": "A사",
+        
+        # LG CNS 관련
+        "LG CNS": "B사",
+        "LGCNS": "B사",
+        "LG-CNS": "B사",
+        
+        # 현대오토에버 관련
+        "현대오토에버": "C사",
+        "HYUNDAI AUTOEVER": "C사",
+        "AutoEver": "C사"
+    }
+    
+    sanitized_text = text
+    for real_name, anonymous_name in replacements.items():
+        sanitized_text = sanitized_text.replace(real_name, anonymous_name)
+    
+    return sanitized_text
 
 # =========================
 # 크롤링 (다음/네이버/구글)
@@ -44,7 +99,9 @@ COMPETITORS = ["삼성SDS", "LG CNS", "현대오토에버"]
 def crawl_daum_news(company: str, max_results: int = 20) -> List[Dict[str, Any]]:
     """다음 뉴스 크롤링"""
     try:
-        query = company.replace(" ", "+")
+        # 파일명을 실제 회사명으로 변환
+        real_company_name = get_real_company_name(company)
+        query = real_company_name.replace(" ", "+")
         url = f"https://search.daum.net/search?w=news&q={query}"
         
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
@@ -64,7 +121,7 @@ def crawl_daum_news(company: str, max_results: int = 20) -> List[Dict[str, Any]]
                 articles.append({
                     "title": title,
                     "url": href,
-                    "company": company,
+                    "company": real_company_name,  # 실제 회사명으로 저장
                     "source": "다음 뉴스",
                     "crawled_at": datetime.now().isoformat()
                 })
@@ -77,7 +134,9 @@ def crawl_daum_news(company: str, max_results: int = 20) -> List[Dict[str, Any]]
 def crawl_naver_news(company: str, max_results: int = 20) -> List[Dict[str, Any]]:
     """네이버 뉴스 크롤링"""
     try:
-        query = company.replace(" ", "+")
+        # 파일명을 실제 회사명으로 변환
+        real_company_name = get_real_company_name(company)
+        query = real_company_name.replace(" ", "+")
         url = f"https://search.naver.com/search.naver?where=news&query={query}"
         
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
@@ -98,7 +157,7 @@ def crawl_naver_news(company: str, max_results: int = 20) -> List[Dict[str, Any]
                 articles.append({
                     "title": title,
                     "url": href,
-                    "company": company,
+                    "company": real_company_name,  # 실제 회사명으로 저장
                     "source": "네이버 뉴스",
                     "crawled_at": datetime.now().isoformat()
                 })
@@ -114,7 +173,9 @@ def crawl_naver_news(company: str, max_results: int = 20) -> List[Dict[str, Any]
 def crawl_google_news(company: str, max_results: int = 20) -> List[Dict[str, Any]]:
     """구글 뉴스 크롤링"""
     try:
-        query = company.replace(" ", "+")
+        # 파일명을 실제 회사명으로 변환
+        real_company_name = get_real_company_name(company)
+        query = real_company_name.replace(" ", "+")
         url = f"https://www.google.com/search?q={query}&tbm=nws&hl=ko"
         
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
@@ -138,7 +199,7 @@ def crawl_google_news(company: str, max_results: int = 20) -> List[Dict[str, Any
                 articles.append({
                     "title": title,
                     "url": link["href"],
-                    "company": company,
+                    "company": real_company_name,  # 실제 회사명으로 저장
                     "source": "구글 뉴스",
                     "crawled_at": datetime.now().isoformat()
                 })
@@ -251,6 +312,9 @@ def extract_differentiation_points(company: str, swot: Dict) -> List[str]:
                 points.append(f"우리 강점: {counter}")
                 break
     
+    # 후처리: 실제 회사명 제거 (더 강력한 익명화)
+    points = [sanitize_company_names(sanitize_company_names(point)) for point in points]
+    
     return points[:5]
 
 
@@ -259,37 +323,49 @@ def extract_differentiation_points(company: str, swot: Dict) -> List[str]:
 # =========================
 def generate_article_summary(title: str, company: str) -> str:
     """개별 기사 요약 (구체적 정보 추출)"""
+    anonymous_name = get_anonymous_name(company)
+    
     if not is_llm_available() or not title:
         return ""
     
     try:
         prompt = f"""
-{company}의 뉴스 제목: "{title}"
+{anonymous_name}의 뉴스 제목: "{title}"
+
+⚠️ 회사명 익명화: 요약에서 "{anonymous_name}"만 사용하고, 실제 회사명은 절대 사용하지 마세요!
+⚠️ 절대 금지: "삼성SDS", "LG CNS", "현대오토에버" 등 실제 회사명 사용 금지!
 
 이 뉴스를 분석하여 다음 정보를 포함한 2-3문장 요약을 작성하라:
 - 구체적인 기술명/제품명/서비스명
 - 사업 규모, 금액, 수치 (있다면)
 - 핵심 성과나 특징
 
-예시: "LG CNS가 자체 개발한 생성형 AI 플랫폼 'EXAONE'을 공개. 한국어 처리 정확도 95%로 업계 최고 수준. 공공/금융 분야 12개 프로젝트에 적용 예정"
+예시: "{anonymous_name}가 자체 개발한 생성형 AI 플랫폼 'EXAONE'을 공개. 한국어 처리 정확도 95%로 업계 최고 수준. 공공/금융 분야 12개 프로젝트에 적용 예정"
+
+⚠️ 🚨 반드시 "{anonymous_name}"만 사용하고 실제 회사명 절대 금지!
 
 요약:"""
         
-        result = call_llm(prompt, temperature=0.3, max_tokens=200, use_secondary=True)
-        return result.strip() if result else ""
+        result = call_llm(prompt, temperature=0.3, max_tokens=100, use_secondary=True)
+        if result:
+            result = sanitize_company_names(result.strip())
+            result = sanitize_company_names(result)  # 두 번 적용
+        return result if result else ""
     except:
         return ""
 
 
 def generate_company_summary(company: str, articles: List[Dict]) -> str:
     """기업 전체 종합 서머리 (구체적 정보 포함)"""
+    anonymous_name = get_anonymous_name(company)
+    
     if not is_llm_available() or not articles:
-        return f"{company}의 최근 활동 정보가 부족합니다."
+        return f"{anonymous_name}의 최근 활동 정보가 부족합니다."
     
     try:
-        # 제목 + 요약 함께 제공
+        # 제목 + 요약 함께 제공 (최대 6개)
         news_details = []
-        for i, a in enumerate(articles[:10], 1):
+        for i, a in enumerate(articles[:6], 1):
             title = a.get('title', '')
             summary = a.get('summary', '')
             
@@ -302,11 +378,14 @@ def generate_company_summary(company: str, articles: List[Dict]) -> str:
         news_text = "\n\n".join(news_details)
         
         prompt = f"""
-{company}의 최근 뉴스와 활동:
+{anonymous_name}의 최근 뉴스와 활동:
 
 {news_text}
 
-위 내용을 분석하여 {company}의 현황을 다음 관점에서 5-7문장으로 요약하라:
+⚠️ 회사명 익명화: 요약에서 "{anonymous_name}"만 사용하고, 실제 회사명은 절대 사용하지 마세요!
+⚠️ 절대 금지: "삼성SDS", "LG CNS", "현대오토에버" 등 실제 회사명 사용 금지!
+
+위 내용을 분석하여 {anonymous_name}의 현황을 다음 관점에서 5-7문장으로 요약하라:
 
 1. 핵심 사업 분야 및 주력 기술/솔루션 (구체적 제품명 포함)
 2. 최근 성과 및 프로젝트 (규모, 수치 포함)
@@ -314,23 +393,29 @@ def generate_company_summary(company: str, articles: List[Dict]) -> str:
 4. 시장 위치 및 경쟁 상황
 
 ⚠️ 추상적 표현 금지. 구체적인 기술명, 제품명, 수치를 반드시 포함하라.
+⚠️ 🚨 반드시 "{anonymous_name}"만 사용하고 실제 회사명 절대 금지!
 """
         
-        result = call_llm(prompt, temperature=0.3, max_tokens=800, use_secondary=True)
-        return result or f"{company}는 다양한 IT 서비스 분야에서 활동 중입니다."
+        result = call_llm(prompt, temperature=0.3, max_tokens=400, use_secondary=True)
+        if result:
+            result = sanitize_company_names(result)
+            result = sanitize_company_names(result)  # 두 번 적용
+        return result or f"{anonymous_name}는 다양한 IT 서비스 분야에서 활동 중입니다."
     except:
-        return f"{company}는 다양한 IT 서비스 분야에서 활동 중입니다."
+        return f"{anonymous_name}는 다양한 IT 서비스 분야에서 활동 중입니다."
 
 
 def generate_swot(company: str, articles: List[Dict]) -> Dict[str, List[str]]:
     """SWOT 분석 생성 (뉴스 제목 + 요약 활용, 구체적 분석)"""
+    anonymous_name = get_anonymous_name(company)
+    
     if not is_llm_available() or not articles:
         return {"S": ["정보 부족"], "W": ["정보 부족"], "O": ["정보 부족"], "T": ["정보 부족"]}
     
     try:
-        # 뉴스 제목 + 요약을 함께 제공 (최대 15개)
+        # 뉴스 제목 + 요약을 함께 제공 (최대 8개)
         news_details = []
-        for i, a in enumerate(articles[:15], 1):
+        for i, a in enumerate(articles[:8], 1):
             title = a.get('title', '제목 없음')
             summary = a.get('summary', '')
             
@@ -346,12 +431,14 @@ def generate_swot(company: str, articles: List[Dict]) -> Dict[str, List[str]]:
         
         prompt = f"""
 너는 IT 업계 전문 분석가다.
-{company}의 최근 뉴스와 활동 내용을 분석하여 상세한 SWOT 분석을 수행하라.
+{anonymous_name}의 최근 뉴스와 활동 내용을 분석하여 상세한 SWOT 분석을 수행하라.
 
 ⚠️ 중요: 이모지(📋, ⚖️, 📝, 📰, 💪, ⚠️, 🔥, ⚡ 등) 사용 절대 금지! 비즈니스 문서이므로 순수 텍스트만 사용하세요.
+⚠️ 회사명 익명화: 분석 결과에서 "{anonymous_name}"만 사용하고, 실제 회사명은 절대 사용하지 마세요!
+⚠️ 절대 금지: "삼성SDS", "LG CNS", "현대오토에버" 등 실제 회사명 사용 금지!
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[{company} 최근 뉴스 및 활동]
+[{anonymous_name} 최근 뉴스 및 활동]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 {news_text}
@@ -383,6 +470,7 @@ T (Threats - 위협): 3-5개
 - 추상적 표현 금지 (예: "우수한 기술력" → "GPT-4 기반 AI 챗봇 정확도 92%")
 - 반드시 위 뉴스에서 언급된 실제 내용 활용
 - 기술명/제품명/사업명을 구체적으로 명시
+- 🚨 반드시 "{anonymous_name}"만 사용하고 실제 회사명 절대 금지!
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 출력 형식 (JSON만 반환):
@@ -415,12 +503,21 @@ T (Threats - 위협): 3-5개
 지금 즉시 위 형식의 JSON만 생성하라!
 """
         
-        result = call_llm(prompt, temperature=0.4, max_tokens=3000, use_secondary=True)
+        result = call_llm(prompt, temperature=0.4, max_tokens=1500, use_secondary=True)
         
         if result:
+            # 후처리: 실제 회사명 제거 (더 강력한 익명화)
+            result = sanitize_company_names(result)
+            result = sanitize_company_names(result)  # 두 번 적용
+            
             # 개선된 JSON 파싱 로직 사용
             swot_data = parse_json_response(result)
             if swot_data and _validate_swot_data(swot_data):
+                # SWOT 데이터의 각 항목도 후처리 (더 강력한 익명화)
+                for key in ['S', 'W', 'O', 'T']:
+                    if key in swot_data and isinstance(swot_data[key], list):
+                        swot_data[key] = [sanitize_company_names(sanitize_company_names(item)) for item in swot_data[key]]
+                
                 print(f"  완료 {company} SWOT: S={len(swot_data.get('S', []))}개, W={len(swot_data.get('W', []))}개, O={len(swot_data.get('O', []))}개, T={len(swot_data.get('T', []))}개")
                 return swot_data
     except Exception as e:
@@ -458,10 +555,18 @@ def generate_competitive_comparison(profiles: Dict[str, Dict]) -> str:
 
 {combined}
 
+⚠️ 회사명 익명화: 분석 결과에서 "A사", "B사", "C사"만 사용하고, 실제 회사명은 절대 사용하지 마세요!
+⚠️ 절대 금지: "삼성SDS", "LG CNS", "현대오토에버" 등 실제 회사명 사용 금지!
+
 이들을 비교하여 각 회사의 차별화 포인트와 경쟁 우위를 3-4문장으로 요약해주세요.
+
+⚠️ 🚨 반드시 "A사", "B사", "C사"만 사용하고 실제 회사명 절대 금지!
 """
         
         result = call_llm(prompt, temperature=0.3, use_secondary=True)
+        if result:
+            result = sanitize_company_names(result)
+            result = sanitize_company_names(result)  # 두 번 적용
         return result or ""
     except:
         return ""
@@ -479,13 +584,18 @@ def generate_competitive_strategy(skax_profile: dict, competitors: list) -> list
     competitors_text = []
     for comp in competitors:
         company = comp.get("company", "")
+        # 이미 익명화된 이름인지 확인 (A사, B사, C사)
+        if company in ["A사", "B사", "C사"]:
+            anonymous_name = company
+        else:
+            anonymous_name = get_anonymous_name(company)
         swot = comp.get("swot", {})
         
         s_list = swot.get("S", [])
         w_list = swot.get("W", [])
         
         comp_text = f"""
-[{company}]
+[{anonymous_name}]
 강점(S):
 {chr(10).join([f"  - {s}" for s in s_list[:5]])}
 
@@ -497,7 +607,12 @@ def generate_competitive_strategy(skax_profile: dict, competitors: list) -> list
     competitors_str = "\n".join(competitors_text)
     
     prompt = f"""
-중요: 각 경쟁사당 정확히 2개씩 (강점 대응 1개 + 약점 활용 1개) 총 6개 전략을 반드시 생성하라!
+🚨 중요: 각 경쟁사당 정확히 2개씩 (강점 대응 1개 + 약점 활용 1개) 총 6개 전략을 반드시 생성하라!
+
+🚨 회사명 익명화 필수: 
+- 절대로 "삼성SDS", "LG CNS", "현대오토에버" 등 실제 회사명을 사용하지 마세요!
+- 반드시 "A사", "B사", "C사"만 사용하세요!
+- 실제 회사명이 하나라도 나오면 전체가 무효입니다!
 
 ⚠️ 이모지 사용 금지: 📋, ⚖️, 📝, 📰, 💪, ⚠️, 🔥, ⚡ 등 모든 이모지 사용 절대 금지! 비즈니스 문서이므로 순수 텍스트만 사용하세요.
 
@@ -545,37 +660,40 @@ def generate_competitive_strategy(skax_profile: dict, competitors: list) -> list
 
 [
   {{
-    "company": "삼성SDS",
-    "counter": "강점 대응: 삼성SDS의 Brightics AI 플랫폼 데이터 분석 역량 → SK AX는 AccuInsight+와 DataRobot AutoML 통합으로 모델 개발 자동화율 45% 향상 + 분석 시간 50% 단축하여 대응. 중소기업 시장에서 접근성과 비용 효율성으로 차별화."
+    "company": "A사",
+    "counter": "강점 대응: A사의 AI 플랫폼 데이터 분석 역량 → SK AX는 AccuInsight+와 DataRobot AutoML 통합으로 모델 개발 자동화율 45% 향상 + 분석 시간 50% 단축하여 대응. 중소기업 시장에서 접근성과 비용 효율성으로 차별화."
   }},
   {{
-    "company": "삼성SDS",
-    "counter": "약점 활용: 삼성SDS의 높은 초기 구축 비용과 복잡한 의사결정 구조 → SK AX는 하이브리드 클라우드로 초기 투자 35% 절감 + 신속한 의사결정으로 프로젝트 착수 기간 40% 단축. 유연한 과금 모델로 중견기업 공략."
+    "company": "A사",
+    "counter": "약점 활용: A사의 높은 초기 구축 비용과 복잡한 의사결정 구조 → SK AX는 하이브리드 클라우드로 초기 투자 35% 절감 + 신속한 의사결정으로 프로젝트 착수 기간 40% 단축. 유연한 과금 모델로 중견기업 공략."
   }},
   {{
-    "company": "LG CNS",
-    "counter": "강점 대응: (위 SWOT의 LG CNS 강점 기반으로 구체적 작성)"
+    "company": "B사",
+    "counter": "강점 대응: (위 SWOT의 B사 강점 기반으로 구체적 작성)"
   }},
   {{
-    "company": "LG CNS",
-    "counter": "약점 활용: (위 SWOT의 LG CNS 약점 기반으로 구체적 작성)"
+    "company": "B사",
+    "counter": "약점 활용: (위 SWOT의 B사 약점 기반으로 구체적 작성)"
   }},
   {{
-    "company": "현대오토에버",
-    "counter": "강점 대응: (위 SWOT의 현대오토에버 강점 기반으로 구체적 작성)"
+    "company": "C사",
+    "counter": "강점 대응: (위 SWOT의 C사 강점 기반으로 구체적 작성)"
   }},
   {{
-    "company": "현대오토에버",
-    "counter": "약점 활용: (위 SWOT의 현대오토에버 약점 기반으로 구체적 작성)"
+    "company": "C사",
+    "counter": "약점 활용: (위 SWOT의 C사 약점 기반으로 구체적 작성)"
   }}
 ]
 
-주의: 순수 JSON 배열만 출력! 설명/마크다운 제외!
-필수: 총 6개 항목 (각 경쟁사당 2개씩)!
+🚨 최종 경고: 
+- 순수 JSON 배열만 출력! 설명/마크다운 제외!
+- 필수: 총 6개 항목 (각 경쟁사당 2개씩)!
+- 절대로 "삼성SDS", "LG CNS", "현대오토에버" 사용 금지!
+- 반드시 "A사", "B사", "C사"만 사용!
 """
     
     print(f"  경쟁사 대응 전략 생성 중... (경쟁사: {len(competitors)}개)")
-    response = call_llm(prompt, temperature=0.6, max_tokens=5000)
+    response = call_llm(prompt, temperature=0.6, max_tokens=2000)
     
     # 디버깅: LLM 응답 확인
     if not response:
@@ -629,8 +747,27 @@ def generate_competitive_strategy(skax_profile: dict, competitors: list) -> list
                 print(f"  [{i}] 경고 - 알 수 없는 경쟁사: '{company}'")
                 # 그래도 추가 (오타 가능성)
             
-            print(f"  [{i}] 추가: {company}")
-            result.append({"company": company, "counter": counter})
+            # 결과에서도 익명화된 이름 사용 (더 강력한 익명화)
+            if company in ["A사", "B사", "C사"]:
+                anonymous_company = company
+            else:
+                anonymous_company = get_anonymous_name(company)
+            
+            # 실제 회사명이 여전히 남아있는 경우 강제 변환
+            if "삼성SDS" in anonymous_company or "삼성 SDS" in anonymous_company or "SAMSUNG SDS" in anonymous_company or "SDS" in anonymous_company:
+                anonymous_company = "A사"
+            elif "LG CNS" in anonymous_company or "LG C&S" in anonymous_company or "LGCNS" in anonymous_company or "CNS" in anonymous_company:
+                anonymous_company = "B사"
+            elif "현대오토에버" in anonymous_company or "현대 오토에버" in anonymous_company or "HYUNDAI AUTOEVER" in anonymous_company or "AutoEver" in anonymous_company or "오토에버" in anonymous_company:
+                anonymous_company = "C사"
+            
+            # counter 텍스트에서도 실제 회사명 제거 (더 강력한 익명화)
+            counter = sanitize_company_names(counter)
+            # 추가로 한 번 더 익명화 적용 (혹시 놓친 부분이 있을 수 있음)
+            counter = sanitize_company_names(counter)
+            
+            print(f"  [{i}] 추가: {anonymous_company}")
+            result.append({"company": anonymous_company, "counter": counter})
     
     elif isinstance(parsed, dict):
         # dict를 list로 변환
@@ -639,14 +776,31 @@ def generate_competitive_strategy(skax_profile: dict, competitors: list) -> list
             if company.lower() in ["company", "counter", "경쟁사"]:
                 continue
                 
+            if company in ["A사", "B사", "C사"]:
+                anonymous_company = company
+            else:
+                anonymous_company = get_anonymous_name(company)
+            
+            # 실제 회사명이 여전히 남아있는 경우 강제 변환
+            if "삼성SDS" in anonymous_company or "삼성 SDS" in anonymous_company or "SAMSUNG SDS" in anonymous_company or "SDS" in anonymous_company:
+                anonymous_company = "A사"
+            elif "LG CNS" in anonymous_company or "LG C&S" in anonymous_company or "LGCNS" in anonymous_company or "CNS" in anonymous_company:
+                anonymous_company = "B사"
+            elif "현대오토에버" in anonymous_company or "현대 오토에버" in anonymous_company or "HYUNDAI AUTOEVER" in anonymous_company or "AutoEver" in anonymous_company or "오토에버" in anonymous_company:
+                anonymous_company = "C사"
+            
             if isinstance(strategies, list):
                 for strategy in strategies:
                     if isinstance(strategy, str) and len(strategy) >= 50:
-                        result.append({"company": company, "counter": strategy})
+                        strategy = sanitize_company_names(strategy)
+                        strategy = sanitize_company_names(strategy)  # 두 번 적용
+                        result.append({"company": anonymous_company, "counter": strategy})
             else:
                 strategy_text = str(strategies)
                 if len(strategy_text) >= 50:
-                    result.append({"company": company, "counter": strategy_text})
+                    strategy_text = sanitize_company_names(strategy_text)
+                    strategy_text = sanitize_company_names(strategy_text)  # 두 번 적용
+                    result.append({"company": anonymous_company, "counter": strategy_text})
     
     else:
         print(f"    오류: 예상치 못한 응답 형식: {type(parsed)}")
@@ -701,7 +855,7 @@ def deduplicate_articles(articles: List[Dict], existing: List[Dict], threshold: 
 
 
 def save_articles(company: str, articles: List[Dict]):
-    """JSON 파일에 저장"""
+    """JSON 파일에 저장 (익명화 적용)"""
     file_path = os.path.join(COMPANY_DIR, f"{company.lower().replace(' ', '_')}.json")
     
     # 기존 데이터 로드
@@ -715,6 +869,11 @@ def save_articles(company: str, articles: List[Dict]):
     
     # 고급 중복 제거 (유사도 기반)
     new_articles = deduplicate_articles(articles, existing, threshold=0.85)
+    
+    # 익명화 적용: company 필드를 익명화된 이름으로 변경
+    for article in new_articles:
+        if "company" in article:
+            article["company"] = get_anonymous_name(article["company"])
     
     # 합치고 저장
     combined = new_articles + existing
@@ -732,17 +891,63 @@ def save_articles(company: str, articles: List[Dict]):
 
 
 def load_articles(company: str) -> List[Dict]:
-    """JSON 파일에서 로드"""
+    """JSON 파일에서 로드 (익명화된 데이터)"""
     file_path = os.path.join(COMPANY_DIR, f"{company.lower().replace(' ', '_')}.json")
     
     if os.path.exists(file_path):
         try:
             with open(file_path, "r", encoding="utf-8") as f:
-                return json.load(f)
+                articles = json.load(f)
+                # 기존 데이터에 실제 회사명이 있다면 익명화 적용
+                for article in articles:
+                    if "company" in article and article["company"] in ["LG CNS", "삼성SDS", "현대오토에버"]:
+                        article["company"] = get_anonymous_name(article["company"])
+                return articles
         except:
             pass
     return []
 
+
+# =========================
+# 데이터 익명화 유틸리티
+# =========================
+def anonymize_existing_data():
+    """기존 데이터를 익명화된 형태로 변환"""
+    print("기존 데이터 익명화 변환 중...")
+    
+    for company_key in COMPETITORS:
+        file_path = os.path.join(COMPANY_DIR, f"{company_key.lower().replace(' ', '_')}.json")
+        
+        if os.path.exists(file_path):
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    articles = json.load(f)
+                
+                # 익명화 적용
+                updated = False
+                for article in articles:
+                    if "company" in article and article["company"] in ["LG CNS", "삼성SDS", "현대오토에버"]:
+                        article["company"] = get_anonymous_name(article["company"])
+                        updated = True
+                
+                if updated:
+                    # 백업 생성
+                    backup_path = file_path + ".backup"
+                    with open(backup_path, "w", encoding="utf-8") as f:
+                        json.dump(articles, f, ensure_ascii=False, indent=2)
+                    
+                    # 익명화된 데이터 저장
+                    with open(file_path, "w", encoding="utf-8") as f:
+                        json.dump(articles, f, ensure_ascii=False, indent=2)
+                    
+                    print(f"  완료: {company_key} 데이터 익명화 변환 (백업: {os.path.basename(backup_path)})")
+                else:
+                    print(f"  스킵: {company_key} 이미 익명화됨")
+                    
+            except Exception as e:
+                print(f"  오류: {company_key} 변환 실패 - {e}")
+    
+    print("데이터 익명화 변환 완료!")
 
 # =========================
 # 메인 도구
@@ -750,10 +955,10 @@ def load_articles(company: str) -> List[Dict]:
 @tool
 def competitor_analysis(update_data: bool = True) -> Dict[str, Any]:
     """
-    3대 경쟁사(삼성SDS, LG CNS, 현대오토에버)의 최신 데이터를 수집하고 종합 분석합니다.
+    3대 경쟁사(A사, B사, C사)의 최신 데이터를 수집하고 종합 분석합니다.
     
     Args:
-        update_data: True면 최신 뉴스 크롤링 (기본값)
+        update_data: True면 최신 뉴스 크롤링 (기존 데이터가 있으면 스킵)
     
     Returns:
         각 경쟁사의 company_summary, swot, recent_news 포함
@@ -766,7 +971,13 @@ def competitor_analysis(update_data: bool = True) -> Dict[str, Any]:
     if update_data:
         print("[1/3] 최신 뉴스 크롤링 (다음/네이버/구글, 병렬 처리)...")
         for company in COMPETITORS:
-            print(f"  → {company}")
+            # 기존 파일이 있는지 확인
+            existing_articles = load_articles(company)
+            if existing_articles and len(existing_articles) > 0:
+                print(f"  → {company}: 기존 데이터 있음 ({len(existing_articles)}개), 크롤링 스킵")
+                continue
+                
+            print(f"  → {company}: 새로 크롤링 시작")
             articles = crawl_all_sources(company, max_per_source=15, use_parallel=True)
             
             print(f"    → 총 {len(articles)}개 수집, 요약 생성 중...", end=" ")
@@ -812,12 +1023,24 @@ def competitor_analysis(update_data: bool = True) -> Dict[str, Any]:
                 "summary": article.get("summary", "")
             })
         
-        profiles[company] = {
+        # 익명화된 이름으로 저장
+        anonymous_name = get_anonymous_name(company)
+        
+        # 회사 요약 생성 및 후처리 (더 강력한 익명화)
+        company_summary = generate_company_summary(company, articles)
+        company_summary = sanitize_company_names(company_summary)
+        company_summary = sanitize_company_names(company_summary)  # 두 번 적용
+        
+        # 차별화 포인트 후처리 (더 강력한 익명화)
+        differentiation_points = extract_differentiation_points(company, swot)
+        differentiation_points = [sanitize_company_names(sanitize_company_names(point)) for point in differentiation_points]
+        
+        profiles[anonymous_name] = {
             "recent_news": recent_news,
-            "company_summary": generate_company_summary(company, articles),
+            "company_summary": company_summary,
             "swot": swot,
             "key_technologies": extract_key_technologies(articles),  # 🆕 기술 분석
-            "differentiation_points": extract_differentiation_points(company, swot),  # 🆕 차별화 포인트
+            "differentiation_points": differentiation_points,  # 🆕 차별화 포인트
             "total_articles": len(articles)
         }
         

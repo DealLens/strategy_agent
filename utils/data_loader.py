@@ -9,9 +9,9 @@ def load_json(path: str):
 
 def load_company_profile(company: str):
     file_map = {
-        "삼성 SDS": "samsung_sds.json",
-        "LG CNS": "lg_cns.json",
-        "포스코DX": "posco_dx.json"
+        "A사": "A사.json",
+        "B사": "B사.json",
+        "C사": "C사.json"
     }
     filename = file_map.get(company)
     if not filename:
