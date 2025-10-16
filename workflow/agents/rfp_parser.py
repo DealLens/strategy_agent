@@ -47,6 +47,53 @@ def _filter_requirements(requirements: list) -> list:
     return filtered
 
 
+def _extract_subject(raw_docs: list) -> str:
+    """RFP 문서에서 주제/제목 추출"""
+    if not is_llm_available() or not raw_docs:
+        return "RFP 분석"
+    
+    try:
+        print("[RFP Parser] 📋 주제 추출 중...")
+
+        # 문서의 앞부분에서 주제 관련 정보 추출 (제목, 프로젝트명 등)
+        combined_text = "\n".join([doc[:800] for doc in raw_docs[:5]])  # 앞부분만
+        if len(combined_text) > 2000:
+            combined_text = combined_text[:2000] + "\n... (이하 생략)"
+
+        prompt = f"""당신은 RFP 분석 전문가입니다. 다음 RFP 문서에서 프로젝트의 주제/제목을 추출해주세요.
+
+=== RFP 문서 내용 (앞부분) ===
+{combined_text}
+
+=== 추출 규칙 ===
+- "제안요청서", "RFP", "과업명", "프로젝트명", "사업명" 등과 관련된 내용 찾기
+- 구체적이고 명확한 프로젝트 주제/제목을 1문장으로 요약
+- 매우 짧게 핵심만 추출 (30자 이내 권장)
+- 이모지 사용 금지, 순수 텍스트만 사용
+
+주제:"""
+
+        result_text = call_llm(prompt, temperature=0.3, max_tokens=100)
+        
+        if result_text:
+            # 결과 정리
+            subject = result_text.strip()
+            # 불필요한 접두사 제거
+            subject = subject.replace("주제:", "").replace("제목:", "").strip()
+            if subject and len(subject) > 3:
+                # 30자 이내로 제한
+                if len(subject) > 30:
+                    subject = subject[:30] + "..."
+                print(f"[RFP Parser] 주제 추출 완료: {subject}")
+                return subject
+        
+        return "RFP 분석"
+        
+    except Exception as e:
+        print(f"[RFP Parser] 오류: 주제 추출 실패: {e}")
+        return "RFP 분석"
+
+
 def _generate_comparison_table(raw_docs: list) -> dict:
     """조견표를 구조화된 형식으로 생성"""
     if not is_llm_available() or not raw_docs:
@@ -237,6 +284,14 @@ def rfp_parser(pdf_path: str) -> dict:
     try:
         raw_results = asyncio.run(run_queries())
         summarized = _summarize_with_ai(raw_results)
+
+        # 주제 추출 추가
+        all_docs = []
+        for docs in raw_results.values():
+            if isinstance(docs, list):
+                all_docs.extend(docs)
+        subject = _extract_subject(all_docs)
+        summarized["subject"] = subject
 
         if raw_results.get("comparison_table"):
             comparison_table = _generate_comparison_table(raw_results["comparison_table"])

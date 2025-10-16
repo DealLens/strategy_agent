@@ -614,6 +614,11 @@ def generate_competitive_strategy(skax_profile: dict, competitors: list) -> list
 - 반드시 "A사", "B사", "C사"만 사용하세요!
 - 실제 회사명이 하나라도 나오면 전체가 무효입니다!
 
+🚨🚨🚨 절대 금지: 모든 수치, 퍼센트, 정량 지표, 점수 표현 금지! 🚨🚨🚨
+- 30%, 40%, 25%, 50% 등 모든 퍼센트 수치 사용 금지
+- "30% 절감", "40% 향상", "25% 개선" 등 모든 정량적 표현 사용 금지
+- 정성적 설명만 사용: "대폭 향상", "크게 절감", "현저한 개선", "매우 높은" 등
+
 ⚠️ 이모지 사용 금지: 📋, ⚖️, 📝, 📰, 💪, ⚠️, 🔥, ⚡ 등 모든 이모지 사용 절대 금지! 비즈니스 문서이므로 순수 텍스트만 사용하세요.
 
 너는 SK AX의 전략 컨설턴트다.
@@ -648,7 +653,7 @@ def generate_competitive_strategy(skax_profile: dict, competitors: list) -> list
 2. 각 전략은 2-3문장으로 구성:
    - 경쟁사의 실제 강점/약점 명시
    - SK AX의 구체적 솔루션명 활용
-   - 정량적 수치 포함 (예: 30% 절감, 40% 향상)
+   - 정성적 효과 설명 (예: 대폭 향상, 크게 절감, 현저한 개선)
 
 3. 반드시 위 SWOT의 실제 내용 기반으로 작성
 
@@ -661,11 +666,11 @@ def generate_competitive_strategy(skax_profile: dict, competitors: list) -> list
 [
   {{
     "company": "A사",
-    "counter": "강점 대응: A사의 AI 플랫폼 데이터 분석 역량 → SK AX는 AccuInsight+와 DataRobot AutoML 통합으로 모델 개발 자동화율 45% 향상 + 분석 시간 50% 단축하여 대응. 중소기업 시장에서 접근성과 비용 효율성으로 차별화."
+    "counter": "강점 대응: A사의 AI 플랫폼 데이터 분석 역량 → SK AX는 AccuInsight+와 DataRobot AutoML 통합으로 모델 개발 자동화율 대폭 향상 + 분석 시간 현저한 단축하여 대응. 중소기업 시장에서 접근성과 비용 효율성으로 차별화."
   }},
   {{
     "company": "A사",
-    "counter": "약점 활용: A사의 높은 초기 구축 비용과 복잡한 의사결정 구조 → SK AX는 하이브리드 클라우드로 초기 투자 35% 절감 + 신속한 의사결정으로 프로젝트 착수 기간 40% 단축. 유연한 과금 모델로 중견기업 공략."
+    "counter": "약점 활용: A사의 높은 초기 구축 비용과 복잡한 의사결정 구조 → SK AX는 하이브리드 클라우드로 초기 투자 대폭 절감 + 신속한 의사결정으로 프로젝트 착수 기간 크게 단축. 유연한 과금 모델로 중견기업 공략."
   }},
   {{
     "company": "B사",
@@ -908,6 +913,36 @@ def load_articles(company: str) -> List[Dict]:
     return []
 
 
+def get_last_crawled_time(company: str) -> datetime:
+    """마지막 크롤링 시간 조회"""
+    state_file_path = os.path.join(COMPANY_DIR, f"{company.lower().replace(' ', '_')}_state.json")
+    
+    if os.path.exists(state_file_path):
+        try:
+            with open(state_file_path, "r", encoding="utf-8") as f:
+                state = json.load(f)
+                if "last_crawled_at" in state:
+                    return datetime.fromisoformat(state["last_crawled_at"])
+        except:
+            pass
+    return None
+
+
+def update_last_crawled_time(company: str):
+    """마지막 크롤링 시간 업데이트"""
+    state_file_path = os.path.join(COMPANY_DIR, f"{company.lower().replace(' ', '_')}_state.json")
+    
+    state = {
+        "last_crawled_at": datetime.now().isoformat()
+    }
+    
+    try:
+        with open(state_file_path, "w", encoding="utf-8") as f:
+            json.dump(state, f, ensure_ascii=False, indent=2)
+    except:
+        pass
+
+
 # =========================
 # 데이터 익명화 유틸리티
 # =========================
@@ -953,12 +988,13 @@ def anonymize_existing_data():
 # 메인 도구
 # =========================
 @tool
-def competitor_analysis(update_data: bool = True) -> Dict[str, Any]:
+def competitor_analysis(update_data: bool = True, force_update: bool = False) -> Dict[str, Any]:
     """
     3대 경쟁사(A사, B사, C사)의 최신 데이터를 수집하고 종합 분석합니다.
     
     Args:
         update_data: True면 최신 뉴스 크롤링 (기존 데이터가 있으면 스킵)
+        force_update: True면 시간 체크 없이 강제로 크롤링 실행
     
     Returns:
         각 경쟁사의 company_summary, swot, recent_news 포함
@@ -971,10 +1007,27 @@ def competitor_analysis(update_data: bool = True) -> Dict[str, Any]:
     if update_data:
         print("[1/3] 최신 뉴스 크롤링 (다음/네이버/구글, 병렬 처리)...")
         for company in COMPETITORS:
-            # 기존 파일이 있는지 확인
+            # 기존 파일이 있는지 확인하고 시간 체크
             existing_articles = load_articles(company)
+            should_crawl = True
+            
             if existing_articles and len(existing_articles) > 0:
-                print(f"  → {company}: 기존 데이터 있음 ({len(existing_articles)}개), 크롤링 스킵")
+                if force_update:
+                    print(f"  → {company}: 강제 업데이트 모드, 기존 데이터 무시하고 재크롤링")
+                else:
+                    # 마지막 크롤링 시간 확인
+                    last_crawled = get_last_crawled_time(company)
+                    if last_crawled:
+                        time_diff = datetime.now() - last_crawled
+                        if time_diff.total_seconds() < 1800:  # 30분 이내면 스킵
+                            print(f"  → {company}: 최근 크롤링됨 ({time_diff.seconds//60}분 전, {len(existing_articles)}개), 크롤링 스킵")
+                            should_crawl = False
+                        else:
+                            print(f"  → {company}: 마지막 크롤링 {time_diff.seconds//3600}시간 전, 재크롤링 필요")
+                    else:
+                        print(f"  → {company}: 기존 데이터 있음 ({len(existing_articles)}개), 시간 정보 없음, 재크롤링")
+            
+            if not should_crawl:
                 continue
                 
             print(f"  → {company}: 새로 크롤링 시작")
@@ -996,6 +1049,7 @@ def competitor_analysis(update_data: bool = True) -> Dict[str, Any]:
             print(f"{summarized_count}개 완료")
             
             save_articles(company, articles)
+            update_last_crawled_time(company)  # 크롤링 시간 업데이트
     else:
         print("[1/3] 기존 데이터 사용 (크롤링 스킵)")
     

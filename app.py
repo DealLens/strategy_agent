@@ -58,31 +58,55 @@ def get_base64_image(image_path):
         return None
 
 def register_korean_font():
-    """한글 폰트 등록"""
-    try:
-        # Windows 맑은 고딕 폰트 경로
-        font_path = "C:/Windows/Fonts/malgun.ttf"
-        if os.path.exists(font_path):
-            pdfmetrics.registerFont(TTFont('MalgunGothic', font_path))
-            return 'MalgunGothic'
-    except:
-        pass
+    """한글 폰트 등록 (개선된 버전)"""
+    font_candidates = [
+        ("C:/Windows/Fonts/malgun.ttf", "MalgunGothic", "맑은 고딕"),
+        ("C:/Windows/Fonts/malgunbd.ttf", "MalgunGothicBold", "맑은 고딕 Bold"),
+        ("C:/Windows/Fonts/gulim.ttc", "Gulim", "굴림"),
+        ("C:/Windows/Fonts/batang.ttc", "Batang", "바탕"),
+        ("C:/Windows/Fonts/dotum.ttc", "Dotum", "돋움"),
+        ("C:/Windows/Fonts/arial.ttf", "Arial", "Arial"),
+    ]
     
-    try:
-        # 대체: 굴림 폰트
-        font_path = "C:/Windows/Fonts/gulim.ttc"
-        if os.path.exists(font_path):
-            pdfmetrics.registerFont(TTFont('Gulim', font_path))
-            return 'Gulim'
-    except:
-        pass
+    for font_path, font_name, display_name in font_candidates:
+        try:
+            if os.path.exists(font_path):
+                pdfmetrics.registerFont(TTFont(font_name, font_path))
+                print(f"폰트 등록 성공: {display_name} ({font_name})")
+                return font_name
+        except Exception as e:
+            print(f"폰트 등록 실패 ({font_path}): {e}")
+            continue
     
+    print("한글 폰트를 찾을 수 없어 기본 폰트를 사용합니다.")
     return 'Helvetica'  # 폴백
 
+def _clean_text(text):
+    """텍스트 정리 함수 (PDF 생성용)"""
+    if not text:
+        return ""
+    
+    # HTML 태그 제거
+    import re
+    text = re.sub(r'<[^>]+>', '', str(text))
+    
+    # 특수 문자 정리
+    text = text.replace('&nbsp;', ' ')
+    text = text.replace('&amp;', '&')
+    text = text.replace('&lt;', '<')
+    text = text.replace('&gt;', '>')
+    text = text.replace('&quot;', '"')
+    text = text.replace('&#39;', "'")
+    
+    # 연속된 공백 정리
+    text = re.sub(r'\s+', ' ', text)
+    
+    return text.strip()
+
 def generate_analysis_pdf():
-    """분석 결과 PDF 생성 (한글 지원)"""
+    """분석 결과 PDF 생성 (한글 지원 개선)"""
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=50, rightMargin=50, topMargin=50, bottomMargin=50)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=40, rightMargin=40, topMargin=40, bottomMargin=40)
     
     # 한글 폰트 등록
     korean_font = register_korean_font()
@@ -91,21 +115,31 @@ def generate_analysis_pdf():
     title_style = ParagraphStyle(
         'CustomTitle',
         fontName=korean_font,
-        fontSize=20,
+        fontSize=24,
         spaceAfter=30,
         alignment=1,  # 중앙 정렬
         textColor=colors.HexColor('#1e3a8a'),
-        leading=24
+        leading=28
+    )
+    
+    subtitle_style = ParagraphStyle(
+        'CustomSubtitle',
+        fontName=korean_font,
+        fontSize=12,
+        spaceAfter=20,
+        alignment=1,  # 중앙 정렬
+        textColor=colors.HexColor('#64748b'),
+        leading=16
     )
     
     heading1_style = ParagraphStyle(
         'CustomHeading1',
         fontName=korean_font,
-        fontSize=16,
-        spaceAfter=12,
-        spaceBefore=12,
+        fontSize=18,
+        spaceAfter=15,
+        spaceBefore=15,
         textColor=colors.HexColor('#1e3a8a'),
-        leading=20
+        leading=22
     )
     
     heading2_style = ParagraphStyle(
@@ -121,79 +155,184 @@ def generate_analysis_pdf():
     normal_style = ParagraphStyle(
         'CustomNormal',
         fontName=korean_font,
-        fontSize=10,
-        spaceAfter=6,
-        leading=14
+        fontSize=11,
+        spaceAfter=8,
+        leading=16
     )
     
     bullet_style = ParagraphStyle(
         'CustomBullet',
         fontName=korean_font,
-        fontSize=9,
-        spaceAfter=4,
+        fontSize=10,
+        spaceAfter=5,
         leftIndent=20,
-        leading=13
+        leading=15
+    )
+    
+    info_style = ParagraphStyle(
+        'CustomInfo',
+        fontName=korean_font,
+        fontSize=10,
+        spaceAfter=5,
+        textColor=colors.HexColor('#64748b'),
+        leading=14
     )
     
     # PDF 내용 구성
     story = []
     
-    # 제목
-    story.append(Paragraph("△ 전략 분석 보고서", title_style))
-    story.append(Spacer(1, 10))
+    # 제목 및 부제목
+    story.append(Paragraph("전략 분석 보고서", title_style))
+    story.append(Paragraph("DealLens 전략분석 AI 에이전트", subtitle_style))
+    story.append(Spacer(1, 20))
     
     # 분석 정보
+    story.append(Paragraph("분석 개요", heading1_style))
     if st.session_state.get('previous_file'):
-        story.append(Paragraph(f"<b>분석 파일:</b> {st.session_state.previous_file.name}", normal_style))
-    story.append(Paragraph(f"<b>분석 시간:</b> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", normal_style))
-    story.append(Spacer(1, 20))
+        story.append(Paragraph(f"분석 파일: {st.session_state.previous_file.name}", info_style))
+    story.append(Paragraph(f"분석 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", info_style))
+    story.append(Paragraph("본 보고서는 DealLens 전략분석 AI 에이전트에 의해 생성되었습니다.", info_style))
+    story.append(Spacer(1, 30))
     
     # 실제 분석 결과 가져오기
     results = st.session_state.get('analysis_results')
     
     if results and not results.get('error'):
+        # === RFP 분석 결과 ===
+        rfp_data = results.get('rfp_parser', {})
+        if rfp_data:
+            story.append(Paragraph("RFP 분석 결과", heading1_style))
+            
+            # 주제 표시
+            subject = rfp_data.get('subject', '')
+            if subject:
+                story.append(Paragraph(f"주제: {_clean_text(subject)}", heading2_style))
+                story.append(Spacer(1, 15))
+            
+            # 핵심 요구사항
+            requirements = rfp_data.get('requirements', [])
+            if requirements:
+                story.append(Paragraph("핵심 요구사항", heading2_style))
+                for i, req in enumerate(requirements[:8], 1):
+                    story.append(Paragraph(f"{i}. {_clean_text(req)[:300]}", bullet_style))
+                story.append(Spacer(1, 15))
+            
+            # 평가 기준
+            evaluation = rfp_data.get('evaluation', [])
+            if evaluation:
+                story.append(Paragraph("평가 기준", heading2_style))
+                for i, eval_item in enumerate(evaluation[:6], 1):
+                    story.append(Paragraph(f"{i}. {_clean_text(eval_item)[:300]}", bullet_style))
+                story.append(Spacer(1, 15))
+        
+        # === 내부 역량 매칭 결과 ===
+        internal_data = results.get('internal_rag', {})
+        internal_matches = internal_data.get('internal_matches', [])
+        if internal_matches:
+            story.append(PageBreak())
+            story.append(Paragraph("내부 역량 매칭 결과", heading1_style))
+            
+            for i, match in enumerate(internal_matches[:5], 1):
+                requirement = match.get('requirement', '')
+                match_score = match.get('match_score', 0)
+                matches = match.get('matches', [])
+                
+                story.append(Paragraph(f"매칭 {i}: {_clean_text(requirement)[:200]}", heading2_style))
+                story.append(Paragraph(f"매칭 점수: {match_score}", bullet_style))
+                
+                if matches:
+                    story.append(Paragraph("매칭된 내부 역량:", bullet_style))
+                    for j, m in enumerate(matches[:3], 1):
+                        # 딕셔너리 형태의 데이터를 깔끔하게 처리
+                        if isinstance(m, dict):
+                            title = m.get('title', '')
+                            summary = m.get('summary', '')
+                            if title:
+                                story.append(Paragraph(f"  {j}. <b>{_clean_text(title)[:100]}</b>", bullet_style))
+                                if summary:
+                                    # 요약에서 핵심 내용만 추출
+                                    clean_summary = _clean_text(summary)[:200]
+                                    story.append(Paragraph(f"     {clean_summary}...", bullet_style))
+                        else:
+                            story.append(Paragraph(f"  {j}. {_clean_text(str(m))[:250]}", bullet_style))
+                story.append(Spacer(1, 10))
+        
         # === [1] 전략 요약 ===
-        strategy_result = results.get('strategy_synthesizer', {})
-        strategy_data = strategy_result.get('strategy', {})
+        # supervisor에서 반환되는 구조에 맞게 수정
+        strategy_result = results.get('strategy', {})
+        strategy_data = strategy_result.get('strategy', {}) if strategy_result else {}
         
         if strategy_data:
-            story.append(Paragraph("[1] 전략 요약", heading1_style))
+            story.append(PageBreak())
+            story.append(Paragraph("1. 전략 요약", heading1_style))
             
             # 전략 요약
             summary = strategy_data.get('summary', '')
             if summary:
-                story.append(Paragraph(summary[:500], normal_style))
-                story.append(Spacer(1, 10))
+                story.append(Paragraph(f"<b>핵심 전략:</b> {_clean_text(summary)[:800]}", normal_style))
+                story.append(Spacer(1, 15))
             
             # Focus 영역
             focus = strategy_data.get('focus', {})
             if focus:
-                story.append(Paragraph("○ 핵심 방향성", heading2_style))
+                story.append(Paragraph("주요 포커스 영역", heading2_style))
                 for key, value in focus.items():
                     if value:
-                        story.append(Paragraph(f"• {key}: {value[:200]}", bullet_style))
-                story.append(Spacer(1, 10))
+                        story.append(Paragraph(f"• <b>{key}:</b> {_clean_text(value)[:300]}", bullet_style))
+                story.append(Spacer(1, 15))
         
         # === [2] 핵심 액션 플랜 ===
         actions = strategy_data.get('prioritized_actions', [])
         if actions:
             story.append(PageBreak())
-            story.append(Paragraph("[2] 핵심 액션 플랜", heading1_style))
+            story.append(Paragraph("2. 핵심 액션 플랜", heading1_style))
             
-            for i, action in enumerate(actions[:8], 1):  # 상위 8개만
+            for i, action in enumerate(actions[:6], 1):  # 상위 6개만
                 if isinstance(action, dict):
                     action_title = action.get('action', f'액션 {i}')
-                    story.append(Paragraph(f"{action_title}", heading2_style))
+                    story.append(Paragraph(f"<b>액션 {i}:</b> {action_title}", heading2_style))
                     
                     why = action.get('why', '')
                     if why:
-                        story.append(Paragraph(f"▷ 이유: {_clean_text(why)[:300]}", bullet_style))
+                        story.append(Paragraph(f"<b>실행 이유:</b> {_clean_text(why)[:400]}", bullet_style))
                     
                     how = action.get('how', '')
                     if how:
-                        story.append(Paragraph(f"◇ 방법: {_clean_text(how)[:300]}", bullet_style))
+                        story.append(Paragraph(f"<b>실행 방법:</b> {_clean_text(how)[:400]}", bullet_style))
                     
-                    story.append(Spacer(1, 8))
+                    story.append(Spacer(1, 12))
+        
+        # === 경쟁사 분석 결과 ===
+        competitor_data = results.get('competitor_analysis', {})
+        competitor_profiles = competitor_data.get('competitor_profiles', {})
+        if competitor_profiles:
+            story.append(PageBreak())
+            story.append(Paragraph("경쟁사 분석 결과", heading1_style))
+            
+            for company, profile in list(competitor_profiles.items())[:3]:  # 상위 3개만
+                story.append(Paragraph(f"<b>{company}</b>", heading2_style))
+                
+                # 회사 요약
+                company_summary = profile.get('company_summary', '')
+                if company_summary:
+                    story.append(Paragraph(f"회사 개요: {_clean_text(company_summary)[:400]}", bullet_style))
+                
+                # 핵심 기술
+                key_technologies = profile.get('key_technologies', [])
+                if key_technologies:
+                    story.append(Paragraph("핵심 기술:", bullet_style))
+                    for tech in key_technologies[:4]:
+                        story.append(Paragraph(f"  • {_clean_text(tech)[:200]}", bullet_style))
+                
+                # SWOT 분석
+                swot = profile.get('swot', {})
+                if swot:
+                    story.append(Paragraph("SWOT 분석:", bullet_style))
+                    for key, value in swot.items():
+                        if value:
+                            story.append(Paragraph(f"  <b>{key}:</b> {_clean_text(value)[:200]}", bullet_style))
+                
+                story.append(Spacer(1, 12))
         
         # === [3] 경쟁사 대응 전략 ===
         appendix = strategy_data.get('appendix', {})
@@ -201,7 +340,7 @@ def generate_analysis_pdf():
         
         if competitor_counters:
             story.append(PageBreak())
-            story.append(Paragraph("[3] 경쟁사 대응 전략", heading1_style))
+            story.append(Paragraph("3. 경쟁사 대응 전략", heading1_style))
             
             # 경쟁사별로 그룹화
             companies = {}
@@ -212,56 +351,63 @@ def generate_analysis_pdf():
                 companies[company].append(counter.get('counter', 'N/A'))
             
             for company, counters in companies.items():
-                # 이미 익명화된 이름이므로 그대로 사용
-                story.append(Paragraph(f"■ {company}", heading2_style))
+                story.append(Paragraph(f"<b>{company}</b> 대응 전략", heading2_style))
                 for j, counter_text in enumerate(counters[:3], 1):  # 상위 3개만
-                    story.append(Paragraph(f"{j}. {_clean_text(counter_text)[:400]}", bullet_style))
-                story.append(Spacer(1, 8))
+                    story.append(Paragraph(f"{j}. {_clean_text(counter_text)[:500]}", bullet_style))
+                story.append(Spacer(1, 10))
         
         # === [4] 리스크 ===
         risks = strategy_data.get('risks', [])
         if risks:
             story.append(PageBreak())
-            story.append(Paragraph("[4] 주요 리스크", heading1_style))
+            story.append(Paragraph("4. 주요 리스크 및 대응방안", heading1_style))
             
             for i, risk in enumerate(risks[:5], 1):  # 상위 5개만
                 if isinstance(risk, dict):
                     risk_text = risk.get('risk', '리스크 항목')
-                    story.append(Paragraph(f"▲ {risk_text[:300]}", bullet_style))
+                    story.append(Paragraph(f"<b>리스크 {i}:</b> {_clean_text(risk_text)[:400]}", bullet_style))
                     
                     mitigation = risk.get('mitigation', '')
                     if mitigation:
-                        story.append(Paragraph(f"   → 대응: {mitigation[:300]}", bullet_style))
-                    story.append(Spacer(1, 6))
+                        story.append(Paragraph(f"<b>대응방안:</b> {_clean_text(mitigation)[:400]}", bullet_style))
+                    story.append(Spacer(1, 10))
         
         # === [5] KPI ===
         kpis = strategy_data.get('kpis', [])
         if kpis:
             story.append(PageBreak())
-            story.append(Paragraph("[5] 핵심 KPI", heading1_style))
+            story.append(Paragraph("5. 핵심 성과지표 (KPI)", heading1_style))
             
-            for i, kpi in enumerate(kpis[:8], 1):  # 상위 8개만
+            for i, kpi in enumerate(kpis[:6], 1):  # 상위 6개만
                 if isinstance(kpi, dict):
                     kpi_name = kpi.get('name', 'KPI')
                     baseline = kpi.get('baseline', 'N/A')
                     target = kpi.get('target', 'N/A')
-                    story.append(Paragraph(f"• {kpi_name}: {baseline} → {target}", bullet_style))
-                    story.append(Spacer(1, 4))
+                    story.append(Paragraph(f"<b>{kpi_name}:</b> {baseline} → {target}", bullet_style))
+                    story.append(Spacer(1, 6))
+        
+        # 마무리 섹션
+        story.append(PageBreak())
+        story.append(Paragraph("결론 및 권고사항", heading1_style))
+        story.append(Paragraph("본 분석을 통해 도출된 전략적 방향성을 바탕으로 체계적인 실행 계획을 수립하고, 정기적인 모니터링을 통해 목표 달성을 보장할 것을 권고합니다.", normal_style))
+        story.append(Spacer(1, 20))
     
     else:
         story.append(Paragraph("※ 분석 결과가 없거나 오류가 발생했습니다.", normal_style))
-    
-    story.append(Spacer(1, 30))
+        story.append(Paragraph("분석을 다시 시도해주세요.", normal_style))
     
     # 푸터
     footer_style = ParagraphStyle(
         'Footer',
         fontName=korean_font,
-        fontSize=8,
+        fontSize=9,
         alignment=1,
-        textColor=colors.grey
+        textColor=colors.HexColor('#64748b'),
+        spaceBefore=20
     )
+    story.append(Paragraph("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", footer_style))
     story.append(Paragraph("본 보고서는 DealLens 전략분석 AI 에이전트에 의해 생성되었습니다.", footer_style))
+    story.append(Paragraph(f"생성일시: {datetime.now().strftime('%Y년 %m월 %d일 %H시 %M분')}", footer_style))
     
     # PDF 생성
     try:
@@ -820,6 +966,11 @@ def render_analysis_detail():
                 with st.expander("① RFP 분석 결과", expanded=True):
                     if results and 'rfp_parser' in results:
                         rfp_data = results['rfp_parser']
+                        
+                        # 주제 표시
+                        if 'subject' in rfp_data:
+                            st.markdown(f"**주제:** {rfp_data['subject']}")
+                        
                         if 'requirements' in rfp_data:
                             st.markdown("**■ 핵심 요구사항:**")
                             for req in rfp_data['requirements'][:10]:
@@ -1170,6 +1321,10 @@ def render_strategy_report():
         with st.expander("① RFP 분석 결과", expanded=True):
             if results and 'rfp_parser' in results and not results.get('error'):
                 rfp_data = results['rfp_parser']
+                
+                # 주제 표시
+                if 'subject' in rfp_data:
+                    st.markdown(f"**주제:** {rfp_data['subject']}")
                 
                 if 'requirements' in rfp_data:
                     st.markdown("**▲ 핵심 요구사항:**")
