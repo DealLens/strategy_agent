@@ -947,7 +947,21 @@ def render_analysis_detail():
                     if results and 'competitor_analysis' in results:
                         competitor_data = results['competitor_analysis']
                         profiles = competitor_data.get('competitor_profiles', {})
-                        for company, profile in profiles.items():
+                        
+                        # ABC 순서로 정렬하기 위한 함수
+                        def get_company_order(company_name):
+                            """회사명을 ABC 순서로 정렬하기 위한 순서 반환"""
+                            if "A사" in company_name or "삼성SDS" in company_name or "삼성 SDS" in company_name or "SAMSUNG SDS" in company_name or "SDS" in company_name:
+                                return 1
+                            elif "B사" in company_name or "LG CNS" in company_name or "LG C&S" in company_name or "LGCNS" in company_name or "CNS" in company_name:
+                                return 2
+                            elif "C사" in company_name or "현대오토에버" in company_name or "현대 오토에버" in company_name or "HYUNDAI AUTOEVER" in company_name or "AutoEver" in company_name or "오토에버" in company_name:
+                                return 3
+                            else:
+                                return 999  # 기타 회사는 마지막에 배치
+                        
+                        # ABC 순서로 정렬하여 출력
+                        for company, profile in sorted(profiles.items(), key=lambda x: get_company_order(x[0])):
                             # 이미 익명화된 이름이므로 그대로 사용
                             st.markdown(f"### {company}")
                             if profile.get('company_summary'):
@@ -1118,13 +1132,13 @@ def render_strategy_report():
         
         # DealLens 로고와 제목을 중앙 정렬로 배치 (로고를 글자 위에)
         # 로고를 base64로 인코딩해서 사용
-        logo_base64 = get_base64_image("data/DealLens_logo1.png")
+        logo_base64 = get_base64_image("data/DealLens_logo2.png")
         if logo_base64:
             st.markdown(f"""
 <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; margin-top: 20px;">
             <img src="data:image/png;base64,{logo_base64}" alt="DealLens Logo" style="height: 90px; margin-bottom: 5px;">
     <h1 style="font-size: 2.2rem; font-weight: 700; color: #1E293B; margin: 0; text-align: center; white-space: nowrap;">
-        최종 전략 분석 보고서
+          최종 전략 분석 보고서
     </h1>
 </div>
 <hr style="margin: 20px 0 30px 0; border: 0.5px solid #e2e2e2;">
@@ -1136,7 +1150,7 @@ def render_strategy_report():
             <span style="color: white; font-size: 2.25rem; font-weight: bold;">DL</span>
     </div>
     <h1 style="font-size: 2.2rem; font-weight: 700; color: #1E293B; margin: 0; text-align: center; white-space: nowrap;">
-        최종 전략 분석 보고서
+          최종 전략 분석 보고서
     </h1>
 </div>
 <hr style="margin: 20px 0 30px 0; border: 0.5px solid #e2e2e2;">
@@ -1292,7 +1306,20 @@ def render_strategy_report():
                 competitor_data = results['competitor_analysis']
                 profiles = competitor_data.get('competitor_profiles', {})
                 
-                for company, profile in profiles.items():
+                # ABC 순서로 정렬하기 위한 함수
+                def get_company_order(company_name):
+                    """회사명을 ABC 순서로 정렬하기 위한 순서 반환"""
+                    if "A사" in company_name or "삼성SDS" in company_name or "삼성 SDS" in company_name or "SAMSUNG SDS" in company_name or "SDS" in company_name:
+                        return 1
+                    elif "B사" in company_name or "LG CNS" in company_name or "LG C&S" in company_name or "LGCNS" in company_name or "CNS" in company_name:
+                        return 2
+                    elif "C사" in company_name or "현대오토에버" in company_name or "현대 오토에버" in company_name or "HYUNDAI AUTOEVER" in company_name or "AutoEver" in company_name or "오토에버" in company_name:
+                        return 3
+                    else:
+                        return 999  # 기타 회사는 마지막에 배치
+                
+                # ABC 순서로 정렬하여 출력
+                for company, profile in sorted(profiles.items(), key=lambda x: get_company_order(x[0])):
                     # 이미 익명화된 이름이므로 그대로 사용
                     st.markdown(f"### {company}")
                     
@@ -1432,13 +1459,13 @@ def render_strategy_detail_page():
     
     # DealLens 로고와 제목을 중앙 정렬로 배치 (로고를 글자 위에)
     # 로고를 base64로 인코딩해서 사용
-    logo_base64 = get_base64_image("data/DealLens_logo1.png")
+    logo_base64 = get_base64_image("data/DealLens_logo2.png")
     if logo_base64:
         st.markdown(f"""
 <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; margin-top: 20px;">
             <img src="data:image/png;base64,{logo_base64}" alt="DealLens Logo" style="height: 90px; margin-bottom: 5px;">
     <h1 style="font-size: 2.2rem; font-weight: 700; color: #1E293B; margin: 0; text-align: center; white-space: nowrap;">
-        최종 전략 분석 보고서
+          최종 전략 분석 보고서
     </h1>
 </div>
 <hr style="margin: 20px 0 30px 0; border: 0.5px solid #e2e2e2;">
@@ -1450,7 +1477,7 @@ def render_strategy_detail_page():
             <span style="color: white; font-size: 2.25rem; font-weight: bold;">DL</span>
     </div>
     <h1 style="font-size: 2.2rem; font-weight: 700; color: #1E293B; margin: 0; text-align: center; white-space: nowrap;">
-        최종 전략 분석 보고서
+          최종 전략 분석 보고서
     </h1>
 </div>
 <hr style="margin: 20px 0 30px 0; border: 0.5px solid #e2e2e2;">

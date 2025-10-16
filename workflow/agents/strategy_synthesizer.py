@@ -1136,8 +1136,21 @@ def _generate_deal_brief(strategy: Dict[str, Any]) -> str:
                 if weakness_content:
                     by_company[company]["weaknesses"].add(weakness_content)
         
+        # ABC 순서로 정렬하기 위한 함수
+        def get_company_order(company_name):
+            """회사명을 ABC 순서로 정렬하기 위한 순서 반환"""
+            if "A사" in company_name or "삼성SDS" in company_name or "삼성 SDS" in company_name or "SAMSUNG SDS" in company_name or "SDS" in company_name:
+                return 1
+            elif "B사" in company_name or "LG CNS" in company_name or "LG C&S" in company_name or "LGCNS" in company_name or "CNS" in company_name:
+                return 2
+            elif "C사" in company_name or "현대오토에버" in company_name or "현대 오토에버" in company_name or "HYUNDAI AUTOEVER" in company_name or "AutoEver" in company_name or "오토에버" in company_name:
+                return 3
+            else:
+                return 999  # 기타 회사는 마지막에 배치
+        
         out = []
-        for company, strategies in by_company.items():
+        # ABC 순서로 정렬하여 출력
+        for company, strategies in sorted(by_company.items(), key=lambda x: get_company_order(x[0])):
             # 강점이나 약점이 하나도 없으면 해당 기업 생략
             if not strategies["strengths"] and not strategies["weaknesses"]:
                 continue
