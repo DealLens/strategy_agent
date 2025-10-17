@@ -115,7 +115,7 @@ def generate_analysis_pdf():
     title_style = ParagraphStyle(
         'CustomTitle',
         fontName=korean_font,
-        fontSize=24,
+        fontSize=27,
         spaceAfter=30,
         alignment=1,  # 중앙 정렬
         textColor=colors.HexColor('#1e3a8a'),
@@ -125,7 +125,7 @@ def generate_analysis_pdf():
     subtitle_style = ParagraphStyle(
         'CustomSubtitle',
         fontName=korean_font,
-        fontSize=12,
+        fontSize=15,
         spaceAfter=20,
         alignment=1,  # 중앙 정렬
         textColor=colors.HexColor('#64748b'),
@@ -135,7 +135,7 @@ def generate_analysis_pdf():
     heading1_style = ParagraphStyle(
         'CustomHeading1',
         fontName=korean_font,
-        fontSize=18,
+        fontSize=21,
         spaceAfter=15,
         spaceBefore=15,
         textColor=colors.HexColor('#1e3a8a'),
@@ -145,7 +145,7 @@ def generate_analysis_pdf():
     heading2_style = ParagraphStyle(
         'CustomHeading2',
         fontName=korean_font,
-        fontSize=14,
+        fontSize=17,
         spaceAfter=10,
         spaceBefore=10,
         textColor=colors.HexColor('#2563eb'),
@@ -155,7 +155,7 @@ def generate_analysis_pdf():
     normal_style = ParagraphStyle(
         'CustomNormal',
         fontName=korean_font,
-        fontSize=11,
+        fontSize=14,
         spaceAfter=8,
         leading=16
     )
@@ -163,7 +163,7 @@ def generate_analysis_pdf():
     bullet_style = ParagraphStyle(
         'CustomBullet',
         fontName=korean_font,
-        fontSize=10,
+        fontSize=13,
         spaceAfter=5,
         leftIndent=20,
         leading=15
@@ -172,7 +172,7 @@ def generate_analysis_pdf():
     info_style = ParagraphStyle(
         'CustomInfo',
         fontName=korean_font,
-        fontSize=10,
+        fontSize=13,
         spaceAfter=5,
         textColor=colors.HexColor('#64748b'),
         leading=14
@@ -400,7 +400,7 @@ def generate_analysis_pdf():
     footer_style = ParagraphStyle(
         'Footer',
         fontName=korean_font,
-        fontSize=9,
+        fontSize=12,
         alignment=1,
         textColor=colors.HexColor('#64748b'),
         spaceBefore=20
@@ -440,6 +440,10 @@ def initialize_session_state():
         st.session_state.supervisor = ParallelSupervisor(llm) if llm else None
     if 'show_strategy_detail' not in st.session_state:
         st.session_state.show_strategy_detail = False
+    if 'analysis_progress' not in st.session_state:
+        st.session_state.analysis_progress = 0
+    if 'show_skeleton' not in st.session_state:
+        st.session_state.show_skeleton = False
 
 def save_analysis_to_history():
     """현재 분석 결과를 히스토리에 저장"""
@@ -466,6 +470,8 @@ def reset_analysis_state():
     st.session_state.previous_file = None
     st.session_state.analysis_results = None
     st.session_state.show_strategy_detail = False
+    st.session_state.analysis_progress = 0
+    st.session_state.show_skeleton = False
 
 async def run_analysis_async(uploaded_file):
     """비동기 분석 실행"""
@@ -572,7 +578,7 @@ st.markdown("""
     }
     
     .main-header h1 {
-        font-size: 2.5rem;
+        font-size: 2.8rem;
         font-weight: 700;
         margin: 0;
         color: white;
@@ -580,7 +586,7 @@ st.markdown("""
     }
     
     .main-header .subtitle {
-        font-size: 0.9rem;
+        font-size: 1.2rem;
         margin: 0;
         color: #ccc;
         font-weight: 400;
@@ -606,7 +612,7 @@ st.markdown("""
         color: white;
         padding: 0.5rem 1rem;
         border-radius: 6px;
-        font-size: 0.9rem;
+        font-size: 1.2rem;
         cursor: pointer;
         transition: all 0.3s ease;
     }
@@ -745,25 +751,95 @@ st.markdown("""
         border-color: rgba(255, 255, 255, 0.3) !important;
     }
     
-    /* 다운로드 링크 스타일 */
-    [data-testid="stSidebar"] .stDownloadButton > button,
-    [data-testid="stSidebar"] button[data-testid="baseButton-secondary"],
+    /* 사이드바 메뉴 버튼 스타일 */
     [data-testid="stSidebar"] .stButton > button {
-        background-color: transparent !important;
-        border: none !important;
-        color: #1a0dab !important;
-        text-decoration: underline !important;
-        font-weight: normal !important;
-        padding: 0.5rem 0 !important;
-        text-align: left !important;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        color: white !important;
+        border-radius: 8px !important;
+        padding: 0.75rem 1rem !important;
+        margin: 0.3rem 0 !important;
+        font-weight: 500 !important;
+        text-align: center !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+        cursor: pointer !important;
     }
     
-    [data-testid="stSidebar"] .stDownloadButton > button:hover,
-    [data-testid="stSidebar"] button[data-testid="baseButton-secondary"]:hover,
     [data-testid="stSidebar"] .stButton > button:hover {
-        background-color: transparent !important;
-        color: #1509a0 !important;
-        text-decoration: underline !important;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%) !important;
+        border-color: rgba(255, 255, 255, 0.4) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    /* 다운로드 링크 스타일 */
+    [data-testid="stSidebar"] .stDownloadButton > button {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        color: white !important;
+        border-radius: 8px !important;
+        padding: 0.75rem 1rem !important;
+        margin: 0.3rem 0 !important;
+        font-weight: 500 !important;
+        text-align: center !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+        cursor: pointer !important;
+    }
+    
+    [data-testid="stSidebar"] .stDownloadButton > button:hover {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%) !important;
+        border-color: rgba(255, 255, 255, 0.4) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
+    }
+    
+    /* 사이드바 설명 텍스트 스타일 */
+    [data-testid="stSidebar"] .stMarkdown p,
+    [data-testid="stSidebar"] .stMarkdown strong {
+        color: rgba(255, 255, 255, 0.8) !important;
+        font-size: 0.9rem !important;
+        margin: 0.5rem 0 !important;
+        line-height: 1.4 !important;
+    }
+    
+    /* 사이드바 구분선 스타일 */
+    [data-testid="stSidebar"] hr {
+        border: none !important;
+        height: 1px !important;
+        background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%) !important;
+        margin: 1rem 0 !important;
+    }
+    
+    /* 사이드바 내 도움말 섹션 스타일 */
+    .help-section {
+        background: linear-gradient(135deg, rgba(0, 0, 0, 0.3) 0%, rgba(26, 26, 46, 0.4) 100%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 8px !important;
+        padding: 1rem !important;
+        margin: 0.5rem 0 !important;
+    }
+    
+    .help-header {
+        color: white !important;
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        margin-bottom: 0.5rem !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+    }
+    
+    .help-content {
+        color: rgba(255, 255, 255, 0.8) !important;
+        font-size: 0.85rem !important;
+        line-height: 1.4 !important;
+        margin: 0 !important;
+    }
+    
+    .help-content strong {
+        color: white !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -854,7 +930,7 @@ def render_main_header():
             <div class="header-left">
                 <div style="display: flex; align-items: center; gap: 1rem;">
                     <div style="display: flex; align-items: center; gap: 0.3rem; background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 6px;">
-                        <span style="color: white; font-size: 0.8rem; font-weight: 600;">SKAX</span>
+                        <span style="color: white; font-size: 1.1rem; font-weight: 600;">SKAX</span>
                     </div>
                     <div>
                         <h1>DealLens</h1>
@@ -879,9 +955,9 @@ def render_sidebar_header():
                     border-radius: 10px; text-align: center; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);">
             <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem; margin-bottom: 0.3rem;">
                 <img src="data:image/png;base64,{logo_base64}" style="height: 50px; width: auto;" alt="SKAX Logo">
-                <h3 style="margin: 0; font-size: 1.2rem; color: white;">DealLens</h3>
+                <h3 style="margin: 0; font-size: 1.5rem; color: white;">DealLens</h3>
             </div>
-            <p style="margin: 0; font-size: 0.8rem; color: #ccc;">전략분석 멀티에이전트</p>
+            <p style="margin: 0; font-size: 1.1rem; color: #ccc;">전략분석 멀티에이전트</p>
         </div>
         """, unsafe_allow_html=True)
     else:
@@ -891,11 +967,35 @@ def render_sidebar_header():
                     border-radius: 10px; text-align: center; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);">
             <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem; margin-bottom: 0.3rem;">
                 <div style="display: flex; align-items: center; gap: 0.2rem; background: rgba(255,255,255,0.1); padding: 0.2rem 0.4rem; border-radius: 4px;">
-                    <span style="color: white; font-size: 0.7rem; font-weight: 600;">SKAX</span>
+                    <span style="color: white; font-size: 1.0rem; font-weight: 600;">SKAX</span>
                 </div>
-                <h3 style="margin: 0; font-size: 1.2rem; color: white;">DealLens</h3>
+                <h3 style="margin: 0; font-size: 1.5rem; color: white;">DealLens</h3>
             </div>
-            <p style="margin: 0; font-size: 0.8rem; color: #ccc;">전략분석 멀티에이전트</p>
+            <p style="margin: 0; font-size: 1.1rem; color: #ccc;">전략분석 멀티에이전트</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+def render_help_section():
+    """도움말 섹션 렌더링"""
+    # 도움말 버튼
+    if st.button("💡 도움말", use_container_width=True):
+        st.session_state.show_help = not st.session_state.get('show_help', False)
+        st.rerun()
+    
+    # 도움말 내용 표시
+    if st.session_state.get('show_help', False):
+        st.markdown("""
+        <div class="help-section">
+            <div class="help-header">
+                <span>💡</span>
+                <span>도움말</span>
+            </div>
+            <div class="help-content">
+                <strong>■ 분석 History:</strong> 이전 분석 결과를 확인하고 다시 볼 수 있습니다.<br>
+                <strong>◎ 새로운 분석:</strong> 새로운 RFP 파일로 분석을 시작합니다.<br>
+                <strong>■ PDF 다운로드:</strong> 분석 결과를 PDF 파일로 저장합니다.<br>
+                <strong>▶ 전략분석보고서 읽기:</strong> 상세한 전략 분석 결과를 확인합니다.
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1172,7 +1272,7 @@ def render_file_upload():
 
     st.markdown("""
     <div style="text-align: left; margin: 0.5rem 0 0.5rem 0;">
-        <h3 style="font-size: 1.5rem; font-weight: 600; color: #333; margin-bottom: 0.5rem;">
+        <h3 style="font-size: 1.8rem; font-weight: 600; color: #333; margin-bottom: 0.5rem;">
             ■ RFP 파일을 업로드해주세요
         </h3>
     </div>
@@ -1209,26 +1309,74 @@ def render_analysis_button(uploaded_file):
         if uploaded_file is not None:
             st.session_state.previous_file = uploaded_file
             st.session_state.analysis_running = True
-            
-            # 분석 진행 중 표시
-            with st.spinner(" AI 에이전트가 분석을 진행 중입니다... \n더 자세한 분석을 위해 최소 1분에서 최대 5분까지 소요될 수 있습니다. "):
-                # 실제 분석 실행
-                results = run_analysis(uploaded_file)
-                st.session_state.analysis_results = results
-                
-            st.session_state.analysis_running = False
-            st.session_state.analysis_completed = True
+            st.session_state.show_skeleton = True
+            st.session_state.analysis_progress = 0
             st.rerun()
 
 # =============================================================================
 # 분석 단계 처리
 # =============================================================================
 
+def render_skeleton_ui():
+    """분석 진행 중 skeleton UI 렌더링"""
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                padding: 2rem; border-radius: 15px; margin: 1rem 0; 
+                box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
+        <div style="text-align: center; color: white;">
+            <div style="font-size: 2.3rem; margin-bottom: 1rem;">🔍</div>
+            <h2 style="margin: 0 0 1rem 0; font-size: 1.8rem;">AI 에이전트가 분석을 진행 중입니다</h2>
+            <p style="margin: 0 0 1.5rem 0; opacity: 0.9;">더 자세한 분석을 위해 최소 1분에서 최대 5분까지 소요될 수 있습니다</p>
+            
+            <!-- 프로그레스 바 -->
+            <div style="background: rgba(255,255,255,0.2); border-radius: 10px; padding: 0.3rem; margin: 1rem 0;">
+                <div style="background: linear-gradient(90deg, #4CAF50, #8BC34A); 
+                            height: 8px; border-radius: 8px; 
+                            width: """ + str(st.session_state.get('analysis_progress', 0)) + """%; 
+                            transition: width 0.3s ease;"></div>
+            </div>
+            
+            <div style="font-size: 1.2rem; opacity: 0.8;">
+                진행률: """ + str(st.session_state.get('analysis_progress', 0)) + """%
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
 def process_analysis_steps():
-    """분석 단계 처리 (실제 분석은 render_analysis_button에서 처리됨)"""
-    # 이제 실제 분석은 버튼 클릭 시 동기적으로 처리되므로
-    # 이 함수는 더 이상 더미 프로그레스를 표시하지 않음
-    pass
+    """분석 단계 처리"""
+    # 분석이 실행 중이고 skeleton UI를 표시해야 하는 경우
+    if st.session_state.get('analysis_running', False) and st.session_state.get('show_skeleton', False):
+        # skeleton UI 렌더링
+        render_skeleton_ui()
+        
+        # 진행률 시뮬레이션 (3초마다 한 칸씩)
+        if st.session_state.analysis_progress < 95:
+            st.session_state.analysis_progress = min(st.session_state.analysis_progress + 5, 95)
+            time.sleep(3)  # 3초 대기
+            st.rerun()
+        
+        # 실제 분석 실행 (동기적으로 처리)
+        if st.session_state.get('previous_file') and not st.session_state.get('analysis_results'):
+            try:
+                # 분석 실행
+                results = run_analysis(st.session_state.previous_file)
+                st.session_state.analysis_results = results
+                st.session_state.analysis_progress = 100
+                
+                # 분석 완료 상태로 변경
+                st.session_state.analysis_completed = True
+                st.session_state.analysis_running = False
+                st.session_state.show_skeleton = False
+                
+                # 페이지 새로고침
+                st.rerun()
+            except Exception as e:
+                st.session_state.analysis_results = {"error": str(e)}
+                st.session_state.analysis_completed = True
+                st.session_state.analysis_running = False
+                st.session_state.show_skeleton = False
+                st.rerun()
 
 # =============================================================================
 # 전략 분석 보고서
@@ -1241,7 +1389,21 @@ def render_strategy_report():
         with st.sidebar:
             render_sidebar_header()
             
-            # 분석 정보 표시
+            # 사이드바 버튼들
+            if st.button("■ 분석 History", use_container_width=True):
+                st.session_state.show_history = not st.session_state.show_history
+                st.rerun()
+            
+            if st.button("◎ 새로운 분석", use_container_width=True):
+                save_analysis_to_history()
+                reset_analysis_state()
+                st.rerun()
+            
+            # 도움말 섹션
+            render_help_section()
+            
+            # 분석 정보 표시 (가장 하단)
+            st.markdown("---")
             if st.session_state.get('previous_file'):
                 file_content = None
                 if hasattr(st.session_state.previous_file, 'getvalue'):
@@ -1257,7 +1419,7 @@ def render_strategy_report():
                         <strong>분석 파일:</strong><br>
                         <a href="data:application/pdf;base64,{b64_file}" 
                            download="{st.session_state.previous_file.name}"
-                           style="color: #1a0dab; text-decoration: underline; font-size: 0.9rem;"
+                           style="color: #1a0dab; text-decoration: underline; font-size: 1.2rem;"
                            onmouseover="this.style.color='#1509a0'"
                            onmouseout="this.style.color='#1a0dab'">
                             {st.session_state.previous_file.name}
@@ -1269,17 +1431,6 @@ def render_strategy_report():
                     st.warning("파일 내용을 찾을 수 없습니다.")
                     
             st.markdown(f"**분석 시간:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-            st.markdown("---")
-            
-            # 사이드바 버튼들
-            if st.button("■ 분석 History", use_container_width=True):
-                st.session_state.show_history = not st.session_state.show_history
-                st.rerun()
-            
-            if st.button("◎ 새로운 분석", use_container_width=True):
-                save_analysis_to_history()
-                reset_analysis_state()
-                st.rerun()
         
         # DealLens 로고와 제목을 중앙 정렬로 배치 (로고를 글자 위에)
         # 로고를 base64로 인코딩해서 사용
@@ -1288,7 +1439,7 @@ def render_strategy_report():
             st.markdown(f"""
 <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; margin-top: 20px;">
             <img src="data:image/png;base64,{logo_base64}" alt="DealLens Logo" style="height: 90px; margin-bottom: 5px;">
-    <h1 style="font-size: 2.2rem; font-weight: 700; color: #1E293B; margin: 0; text-align: center; white-space: nowrap;">
+    <h1 style="font-size: 2.5rem; font-weight: 700; color: #1E293B; margin: 0; text-align: center; white-space: nowrap;">
           최종 전략 분석 보고서
     </h1>
 </div>
@@ -1298,9 +1449,9 @@ def render_strategy_report():
             st.markdown("""
 <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; margin-top: 20px;">
         <div style="height: 90px; width: 90px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
-            <span style="color: white; font-size: 2.25rem; font-weight: bold;">DL</span>
+            <span style="color: white; font-size: 2.55rem; font-weight: bold;">DL</span>
     </div>
-    <h1 style="font-size: 2.2rem; font-weight: 700; color: #1E293B; margin: 0; text-align: center; white-space: nowrap;">
+    <h1 style="font-size: 2.5rem; font-weight: 700; color: #1E293B; margin: 0; text-align: center; white-space: nowrap;">
           최종 전략 분석 보고서
     </h1>
 </div>
@@ -1549,7 +1700,21 @@ def render_strategy_detail_page():
     with st.sidebar:
         render_sidebar_header()
         
-        # 분석 정보 표시
+        # 사이드바 버튼들
+        if st.button("■ 분석 History", use_container_width=True):
+            st.session_state.show_history = not st.session_state.show_history
+            st.rerun()
+        
+        if st.button("◎ 새로운 분석", use_container_width=True):
+            save_analysis_to_history()
+            reset_analysis_state()
+            st.rerun()
+        
+        # 도움말 섹션
+        render_help_section()
+        
+        # 분석 정보 표시 (가장 하단)
+        st.markdown("---")
         if st.session_state.get('previous_file'):
             file_content = None
             if hasattr(st.session_state.previous_file, 'getvalue'):
@@ -1565,7 +1730,7 @@ def render_strategy_detail_page():
                     <strong>분석 파일:</strong><br>
                     <a href="data:application/pdf;base64,{b64_file}" 
                        download="{st.session_state.previous_file.name}"
-                       style="color: #1a0dab; text-decoration: underline; font-size: 0.9rem;"
+                       style="color: #1a0dab; text-decoration: underline; font-size: 1.2rem;"
                        onmouseover="this.style.color='#1509a0'"
                        onmouseout="this.style.color='#1a0dab'">
                         {st.session_state.previous_file.name}
@@ -1577,39 +1742,12 @@ def render_strategy_detail_page():
                 st.warning("파일 내용을 찾을 수 없습니다.")
                 
         st.markdown(f"**분석 시간:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        st.markdown("---")
-        
-        # 사이드바 버튼들
-        if st.button("◀ 분석 결과로 돌아가기", use_container_width=True):
+    
+    # 돌아가기 버튼 추가
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("◀ 분석 결과로 돌아가기", use_container_width=True, type="secondary"):
             st.session_state.show_strategy_detail = False
-            st.rerun()
-        
-        # PDF 다운로드 버튼 추가
-        st.markdown("---")
-        try:
-            pdf_data = generate_analysis_pdf()
-            filename = f"전략분석보고서_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-            
-            st.download_button(
-                label="■ PDF 다운로드",
-                data=pdf_data,
-                file_name=filename,
-                mime="application/pdf",
-                use_container_width=True,
-                type="primary"
-            )
-        except Exception as e:
-            st.error(f"PDF 생성 중 오류: {e}")
-        
-        st.markdown("---")
-        
-        if st.button("■ 분석 History", use_container_width=True):
-            st.session_state.show_history = not st.session_state.show_history
-            st.rerun()
-        
-        if st.button("◎ 새로운 분석", use_container_width=True):
-            save_analysis_to_history()
-            reset_analysis_state()
             st.rerun()
     
     # DealLens 로고와 제목을 중앙 정렬로 배치 (로고를 글자 위에)
@@ -1619,7 +1757,7 @@ def render_strategy_detail_page():
         st.markdown(f"""
 <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; margin-top: 20px;">
             <img src="data:image/png;base64,{logo_base64}" alt="DealLens Logo" style="height: 90px; margin-bottom: 5px;">
-    <h1 style="font-size: 2.2rem; font-weight: 700; color: #1E293B; margin: 0; text-align: center; white-space: nowrap;">
+    <h1 style="font-size: 2.5rem; font-weight: 700; color: #1E293B; margin: 0; text-align: center; white-space: nowrap;">
           최종 전략 분석 보고서
     </h1>
 </div>
@@ -1629,9 +1767,9 @@ def render_strategy_detail_page():
         st.markdown("""
 <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; margin-top: 20px;">
         <div style="height: 90px; width: 90px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 5px;">
-            <span style="color: white; font-size: 2.25rem; font-weight: bold;">DL</span>
+            <span style="color: white; font-size: 2.55rem; font-weight: bold;">DL</span>
     </div>
-    <h1 style="font-size: 2.2rem; font-weight: 700; color: #1E293B; margin: 0; text-align: center; white-space: nowrap;">
+    <h1 style="font-size: 2.5rem; font-weight: 700; color: #1E293B; margin: 0; text-align: center; white-space: nowrap;">
           최종 전략 분석 보고서
     </h1>
 </div>
@@ -2305,8 +2443,28 @@ def render_strategy_detail_page():
     else:
         st.warning("전략 분석 결과를 찾을 수 없습니다.")
     
-    # 하단 버튼
+    # 하단 버튼들
     st.markdown("---")
+    
+    # PDF 다운로드 버튼
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        try:
+            pdf_data = generate_analysis_pdf()
+            filename = f"DealLens_분석보고서_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+            
+            st.download_button(
+                label="■ 분석 결과 PDF 다운로드",
+                data=pdf_data,
+                file_name=filename,
+                mime="application/pdf",
+                use_container_width=True
+            )
+        except Exception as e:
+            st.error(f"PDF 생성 중 오류가 발생했습니다: {str(e)}")
+            st.info("reportlab 라이브러리가 설치되어 있는지 확인해주세요: pip install reportlab")
+    
+    # 돌아가기 버튼
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         if st.button("← 분석 결과로 돌아가기", use_container_width=True, type="primary", key="back_bottom"):
