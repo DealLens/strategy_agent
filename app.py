@@ -812,6 +812,116 @@ st.markdown("""
         margin: 1rem 0 !important;
     }
     
+    /* 스켈레톤 UI 스타일 */
+    .skeleton-container {
+        padding: 2rem 0;
+    }
+    
+    .skeleton-header {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: skeleton-loading 1.5s infinite;
+        border-radius: 8px;
+        height: 60px;
+        margin: 1rem 0;
+    }
+    
+    .skeleton-card {
+        background: linear-gradient(90deg, #f8f9fa 25%, #e9ecef 50%, #f8f9fa 75%);
+        background-size: 200% 100%;
+        animation: skeleton-loading 1.5s infinite;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        border: 1px solid #e9ecef;
+    }
+    
+    .skeleton-title {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: skeleton-loading 1.5s infinite;
+        border-radius: 4px;
+        height: 24px;
+        width: 60%;
+        margin-bottom: 1rem;
+    }
+    
+    .skeleton-text {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: skeleton-loading 1.5s infinite;
+        border-radius: 4px;
+        height: 16px;
+        margin: 0.5rem 0;
+    }
+    
+    .skeleton-text-short {
+        width: 80%;
+    }
+    
+    .skeleton-text-medium {
+        width: 60%;
+    }
+    
+    .skeleton-text-long {
+        width: 90%;
+    }
+    
+    .skeleton-button {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: skeleton-loading 1.5s infinite;
+        border-radius: 6px;
+        height: 40px;
+        width: 120px;
+        margin: 1rem 0;
+    }
+    
+    .skeleton-step {
+        background: linear-gradient(90deg, #f8f9fa 25%, #e9ecef 50%, #f8f9fa 75%);
+        background-size: 200% 100%;
+        animation: skeleton-loading 1.5s infinite;
+        border-radius: 8px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        border-left: 4px solid #dee2e6;
+    }
+    
+    .skeleton-progress {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: skeleton-loading 1.5s infinite;
+        border-radius: 10px;
+        height: 8px;
+        margin: 1rem 0;
+    }
+    
+    @keyframes skeleton-loading {
+        0% {
+            background-position: -200% 0;
+        }
+        100% {
+            background-position: 200% 0;
+        }
+    }
+    
+    /* 비활성화된 버튼 스타일 */
+    .stButton > button:disabled {
+        background-color: #f5f5f5 !important;
+        color: #9e9e9e !important;
+        border-color: #e0e0e0 !important;
+        cursor: not-allowed !important;
+        opacity: 0.6 !important;
+    }
+    
+    .stButton > button:disabled:hover {
+        background-color: #f5f5f5 !important;
+        color: #9e9e9e !important;
+        border-color: #e0e0e0 !important;
+        transform: none !important;
+        box-shadow: none !important;
+    }
+    
     /* 사이드바 내 도움말 섹션 스타일 */
     .help-section {
         background: linear-gradient(135deg, rgba(0, 0, 0, 0.3) 0%, rgba(26, 26, 46, 0.4) 100%) !important;
@@ -998,6 +1108,7 @@ def render_help_section():
             </div>
         </div>
         """, unsafe_allow_html=True)
+
 
 # =============================================================================
 # 분석 히스토리 사이드바
@@ -1297,21 +1408,35 @@ def render_analysis_button(uploaded_file):
 
     col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
     with col_btn2:
-        run_button = st.button(
-            "▶ 분석 시작",
-            use_container_width=True,
-            type="primary",
-            disabled=uploaded_file is None,
-            help="RFP 파일을 업로드한 후 클릭하세요"
-        )
-
-    if run_button:
-        if uploaded_file is not None:
-            st.session_state.previous_file = uploaded_file
-            st.session_state.analysis_running = True
-            st.session_state.show_skeleton = True
-            st.session_state.analysis_progress = 0
-            st.rerun()
+        # 분석 중인지 확인
+        is_analysis_running = st.session_state.get('analysis_running', False)
+        
+        if is_analysis_running:
+            # 분석 중일 때 비활성화된 버튼
+            st.button(
+                "⏳ 분석 진행 중...",
+                use_container_width=True,
+                type="secondary",
+                disabled=True,
+                help="분석이 진행 중입니다. 잠시만 기다려주세요."
+            )
+        else:
+            # 일반 상태의 버튼
+            run_button = st.button(
+                "▶ 분석 시작",
+                use_container_width=True,
+                type="primary",
+                disabled=uploaded_file is None,
+                help="RFP 파일을 업로드한 후 클릭하세요"
+            )
+            
+            if run_button:
+                if uploaded_file is not None:
+                    st.session_state.previous_file = uploaded_file
+                    st.session_state.analysis_running = True
+                    st.session_state.show_skeleton = True
+                    st.session_state.analysis_progress = 0
+                    st.rerun()
 
 # =============================================================================
 # 분석 단계 처리
@@ -1319,29 +1444,83 @@ def render_analysis_button(uploaded_file):
 
 def render_skeleton_ui():
     """분석 진행 중 skeleton UI 렌더링"""
-    st.markdown("""
-    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                padding: 2rem; border-radius: 15px; margin: 1rem 0; 
-                box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
-        <div style="text-align: center; color: white;">
-            <div style="font-size: 2.3rem; margin-bottom: 1rem;">🔍</div>
-            <h2 style="margin: 0 0 1rem 0; font-size: 1.8rem;">AI 에이전트가 분석을 진행 중입니다</h2>
-            <p style="margin: 0 0 1.5rem 0; opacity: 0.9;">더 자세한 분석을 위해 최소 1분에서 최대 5분까지 소요될 수 있습니다</p>
-            
-            <!-- 프로그레스 바 -->
-            <div style="background: rgba(255,255,255,0.2); border-radius: 10px; padding: 0.3rem; margin: 1rem 0;">
-                <div style="background: linear-gradient(90deg, #4CAF50, #8BC34A); 
-                            height: 8px; border-radius: 8px; 
-                            width: """ + str(st.session_state.get('analysis_progress', 0)) + """%; 
-                            transition: width 0.3s ease;"></div>
+    
+    # 스켈레톤 UI 표시 - Streamlit 컨테이너 사용
+    with st.container():
+        # 분석 단계들
+        with st.container():
+            st.markdown("### 📋 RFP 문서 분석 중...")
+            st.markdown("""
+            <div class="skeleton-step">
+                <div class="skeleton-title"></div>
+                <div class="skeleton-text skeleton-text-short"></div>
+                <div class="skeleton-text skeleton-text-medium"></div>
             </div>
-            
-            <div style="font-size: 1.2rem; opacity: 0.8;">
-                진행률: """ + str(st.session_state.get('analysis_progress', 0)) + """%
+            """, unsafe_allow_html=True)
+        
+        with st.container():
+            st.markdown("### 🔍 경쟁사 분석 중...")
+            st.markdown("""
+            <div class="skeleton-step">
+                <div class="skeleton-title"></div>
+                <div class="skeleton-text skeleton-text-long"></div>
+                <div class="skeleton-text skeleton-text-short"></div>
             </div>
+            """, unsafe_allow_html=True)
+        
+        with st.container():
+            st.markdown("### 💡 전략 도출 중...")
+            st.markdown("""
+            <div class="skeleton-step">
+                <div class="skeleton-title"></div>
+                <div class="skeleton-text skeleton-text-medium"></div>
+                <div class="skeleton-text skeleton-text-long"></div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # 예상 결과 카드들
+        with st.container():
+            st.markdown("### 📊 예상 분석 결과")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("""
+                <div class="skeleton-card">
+                    <div class="skeleton-title"></div>
+                    <div class="skeleton-text skeleton-text-short"></div>
+                    <div class="skeleton-text skeleton-text-medium"></div>
+                    <div class="skeleton-text skeleton-text-long"></div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col2:
+                st.markdown("""
+                <div class="skeleton-card">
+                    <div class="skeleton-title"></div>
+                    <div class="skeleton-text skeleton-text-medium"></div>
+                    <div class="skeleton-text skeleton-text-short"></div>
+                    <div class="skeleton-text skeleton-text-long"></div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        with st.container():
+            st.markdown("""
+            <div class="skeleton-card">
+                <div class="skeleton-title"></div>
+                <div class="skeleton-text skeleton-text-long"></div>
+                <div class="skeleton-text skeleton-text-short"></div>
+                <div class="skeleton-text skeleton-text-medium"></div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # 하단 버튼들
+        st.markdown("""
+        <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 2rem;">
+            <div class="skeleton-button"></div>
+            <div class="skeleton-button"></div>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
 def process_analysis_steps():
     """분석 단계 처리"""
@@ -2485,6 +2664,23 @@ def main():
     # 헤더 렌더링 (분석 완료 시에는 숨김)
     if not st.session_state.get('analysis_completed', False):
         render_main_header()
+        
+        # 랜딩페이지 사이드바
+        with st.sidebar:
+            render_sidebar_header()
+            
+            # 사이드바 버튼들
+            if st.button("■ 분석 History", use_container_width=True):
+                st.session_state.show_history = not st.session_state.show_history
+                st.rerun()
+            
+            if st.button("◎ 새로운 분석", use_container_width=True):
+                save_analysis_to_history()
+                reset_analysis_state()
+                st.rerun()
+            
+            # 도움말 섹션
+            render_help_section()
     
     # 분석 히스토리 사이드바
     render_analysis_history()
