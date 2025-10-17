@@ -922,6 +922,28 @@ st.markdown("""
         box-shadow: none !important;
     }
     
+    /* 동그라미 로딩 스피너 */
+    .spinner-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 2rem 0;
+    }
+    
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
     /* 사이드바 내 도움말 섹션 스타일 */
     .help-section {
         background: linear-gradient(135deg, rgba(0, 0, 0, 0.3) 0%, rgba(26, 26, 46, 0.4) 100%) !important;
@@ -1444,6 +1466,13 @@ def render_analysis_button(uploaded_file):
 
 def render_skeleton_ui():
     """분석 진행 중 skeleton UI 렌더링"""
+    
+    # 동그라미 로딩 스피너 표시
+    st.markdown("""
+    <div class="spinner-container">
+        <div class="spinner"></div>
+    </div>
+    """, unsafe_allow_html=True)
     
     # 스켈레톤 UI 표시 - Streamlit 컨테이너 사용
     with st.container():
