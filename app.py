@@ -25,7 +25,7 @@ load_dotenv()
 
 # 페이지 설정
 st.set_page_config(
-    page_title="DealLens 전략분석 에이전트",
+    page_title="SALT 전략분석 에이전트",
     layout="wide",
     initial_sidebar_state="expanded",
     page_icon="▸"
@@ -183,7 +183,7 @@ def generate_analysis_pdf():
     
     # 제목 및 부제목
     story.append(Paragraph("전략 분석 보고서", title_style))
-    story.append(Paragraph("DealLens 전략분석 AI 에이전트", subtitle_style))
+    story.append(Paragraph("SALT 전략분석 AI 에이전트", subtitle_style))
     story.append(Spacer(1, 20))
     
     # 분석 정보
@@ -191,7 +191,7 @@ def generate_analysis_pdf():
     if st.session_state.get('previous_file'):
         story.append(Paragraph(f"분석 파일: {st.session_state.previous_file.name}", info_style))
     story.append(Paragraph(f"분석 시간: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", info_style))
-    story.append(Paragraph("본 보고서는 DealLens 전략분석 AI 에이전트에 의해 생성되었습니다.", info_style))
+    story.append(Paragraph("본 보고서는 SALT 전략분석 AI 에이전트에 의해 생성되었습니다.", info_style))
     story.append(Spacer(1, 30))
     
     # 실제 분석 결과 가져오기
@@ -406,7 +406,7 @@ def generate_analysis_pdf():
         spaceBefore=20
     )
     story.append(Paragraph("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", footer_style))
-    story.append(Paragraph("본 보고서는 DealLens 전략분석 AI 에이전트에 의해 생성되었습니다.", footer_style))
+    story.append(Paragraph("본 보고서는 SALT 전략분석 AI 에이전트에 의해 생성되었습니다.", footer_style))
     story.append(Paragraph(f"생성일시: {datetime.now().strftime('%Y년 %m월 %d일 %H시 %M분')}", footer_style))
     
     # PDF 생성
@@ -1037,16 +1037,29 @@ if query_params.get("toggle_history") == "true":
 
 def render_main_header():
     """메인 헤더 렌더링"""
-    if logo_base64:
+    salt_logo_base64 = get_base64_image("data/salt2.png")
+    if logo_base64 and salt_logo_base64:
         st.markdown(f"""
 <div class="main-header">
     <div class="header-left">
                 <div style="display: flex; align-items: center; gap: 1rem;">
-                    <img src="data:image/png;base64,{logo_base64}" style="height: 60px; width: auto;" alt="SKAX Logo">
-                    <div>
-        <h1>DealLens</h1>
-        <div class="subtitle">전략분석 멀티에이전트</div>
-                    </div>
+                    <img src="data:image/png;base64,{logo_base64}" style="height: 72px; width: auto;" alt="SKAX Logo">
+                    <img src="data:image/png;base64,{salt_logo_base64}" style="height: 72px; width: auto;" alt="SALT Logo">
+                </div>
+    </div>
+    <div class="header-right">
+        <div class="nav-buttons">
+                    <button class="nav-btn" id="header-history-btn">■ 분석 History</button>
+        </div>
+</div>
+    </div>
+    """, unsafe_allow_html=True)
+    elif salt_logo_base64:
+        st.markdown(f"""
+<div class="main-header">
+    <div class="header-left">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <img src="data:image/png;base64,{salt_logo_base64}" style="height: 72px; width: auto;" alt="SALT Logo">
                 </div>
     </div>
     <div class="header-right">
@@ -1062,11 +1075,7 @@ def render_main_header():
             <div class="header-left">
                 <div style="display: flex; align-items: center; gap: 1rem;">
                     <div style="display: flex; align-items: center; gap: 0.3rem; background: rgba(255,255,255,0.1); padding: 0.3rem 0.6rem; border-radius: 6px;">
-                        <span style="color: white; font-size: 1.1rem; font-weight: 600;">SKAX</span>
-                    </div>
-                    <div>
-                        <h1>DealLens</h1>
-                        <div class="subtitle">전략분석 멀티에이전트</div>
+                        <span style="color: white; font-size: 1.1rem; font-weight: 600;">SALT</span>
                     </div>
                 </div>
             </div>
@@ -1080,16 +1089,26 @@ def render_main_header():
 
 def render_sidebar_header():
     """사이드바 헤더 렌더링"""
-    if logo_base64:
+    salt_logo_base64 = get_base64_image("data/salt2.png")
+    if logo_base64 and salt_logo_base64:
         st.markdown(f"""
         <div style="background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 25%, #16213e 50%, #0f3460 75%, #533483 100%);
                     padding: 0.8rem 1rem; margin-bottom: 1rem; color: white; 
                     border-radius: 10px; text-align: center; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);">
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem; margin-bottom: 0.3rem;">
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem;">
                 <img src="data:image/png;base64,{logo_base64}" style="height: 50px; width: auto;" alt="SKAX Logo">
-                <h3 style="margin: 0; font-size: 1.5rem; color: white;">DealLens</h3>
+                <img src="data:image/png;base64,{salt_logo_base64}" style="height: 50px; width: auto;" alt="SALT Logo">
             </div>
-            <p style="margin: 0; font-size: 1.1rem; color: #ccc;">전략분석 멀티에이전트</p>
+        </div>
+        """, unsafe_allow_html=True)
+    elif salt_logo_base64:
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 25%, #16213e 50%, #0f3460 75%, #533483 100%);
+                    padding: 0.8rem 1rem; margin-bottom: 1rem; color: white; 
+                    border-radius: 10px; text-align: center; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);">
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem;">
+                <img src="data:image/png;base64,{salt_logo_base64}" style="height: 50px; width: auto;" alt="SALT Logo">
+            </div>
         </div>
         """, unsafe_allow_html=True)
     else:
@@ -1097,13 +1116,11 @@ def render_sidebar_header():
         <div style="background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 25%, #16213e 50%, #0f3460 75%, #533483 100%);
                     padding: 0.8rem 1rem; margin-bottom: 1rem; color: white; 
                     border-radius: 10px; text-align: center; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);">
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 0.3rem; margin-bottom: 0.3rem;">
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem;">
                 <div style="display: flex; align-items: center; gap: 0.2rem; background: rgba(255,255,255,0.1); padding: 0.2rem 0.4rem; border-radius: 4px;">
-                    <span style="color: white; font-size: 1.0rem; font-weight: 600;">SKAX</span>
+                    <span style="color: white; font-size: 1.0rem; font-weight: 600;">SALT</span>
                 </div>
-                <h3 style="margin: 0; font-size: 1.5rem; color: white;">DealLens</h3>
             </div>
-            <p style="margin: 0; font-size: 1.1rem; color: #ccc;">전략분석 멀티에이전트</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1640,13 +1657,13 @@ def render_strategy_report():
                     
             st.markdown(f"**분석 시간:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         
-        # DealLens 로고와 제목을 중앙 정렬로 배치 (로고를 글자 위에)
+        # SALT 로고와 제목을 중앙 정렬로 배치 (로고를 글자 위에)
         # 로고를 base64로 인코딩해서 사용
-        logo_base64 = get_base64_image("data/DealLens_logo2.png")
+        logo_base64 = get_base64_image("data/salt1.png")
         if logo_base64:
             st.markdown(f"""
 <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; margin-top: 20px;">
-            <img src="data:image/png;base64,{logo_base64}" alt="DealLens Logo" style="height: 90px; margin-bottom: 5px;">
+            <img src="data:image/png;base64,{logo_base64}" alt="SALT Logo" style="height: 90px; margin-bottom: 5px;">
     <h1 style="font-size: 2.5rem; font-weight: 700; color: #1E293B; margin: 0; text-align: center; white-space: nowrap;">
           최종 전략 분석 보고서
     </h1>
@@ -1885,7 +1902,7 @@ def render_strategy_report():
         with col2:
             try:
                 pdf_data = generate_analysis_pdf()
-                filename = f"DealLens_분석보고서_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+                filename = f"SALT_분석보고서_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
                 
                 st.download_button(
                     label="■ 분석 결과 PDF 다운로드",
@@ -1958,13 +1975,13 @@ def render_strategy_detail_page():
             st.session_state.show_strategy_detail = False
             st.rerun()
     
-    # DealLens 로고와 제목을 중앙 정렬로 배치 (로고를 글자 위에)
+    # SALT 로고와 제목을 중앙 정렬로 배치 (로고를 글자 위에)
     # 로고를 base64로 인코딩해서 사용
-    logo_base64 = get_base64_image("data/DealLens_logo2.png")
+    logo_base64 = get_base64_image("data/salt1.png")
     if logo_base64:
         st.markdown(f"""
 <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; margin-top: 20px;">
-            <img src="data:image/png;base64,{logo_base64}" alt="DealLens Logo" style="height: 90px; margin-bottom: 5px;">
+            <img src="data:image/png;base64,{logo_base64}" alt="SALT Logo" style="height: 90px; margin-bottom: 5px;">
     <h1 style="font-size: 2.5rem; font-weight: 700; color: #1E293B; margin: 0; text-align: center; white-space: nowrap;">
           최종 전략 분석 보고서
     </h1>
@@ -2659,7 +2676,7 @@ def render_strategy_detail_page():
     with col2:
         try:
             pdf_data = generate_analysis_pdf()
-            filename = f"DealLens_분석보고서_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+            filename = f"SALT_분석보고서_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
             
             st.download_button(
                 label="■ 분석 결과 PDF 다운로드",
