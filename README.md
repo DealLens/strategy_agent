@@ -79,7 +79,8 @@ cd strategy_agent
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# 의존성 설치
+# 의존성 설치 (필수)
+# requirements.txt 파일에 명시된 모든 패키지를 설치해야 합니다.
 pip install -r requirements.txt
 ```
 
@@ -203,12 +204,8 @@ python -c "from retrivers.internal_retriever import build_internal_retriever; bu
 
 ## 📞 지원
 
-기술 지원이나 문의사항이 있으시면 다음으로 연락주세요:
-- 개발팀: [연락처]
-- 이메일: [이메일 주소]
-
 ---
 
 **Version**: 3.1  
 **Last Updated**: 2024년 12월  
-**Author**: SK AX 개발팀
+**Author**: SK AX 신입사원 개발팀 8조
