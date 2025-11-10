@@ -1,0 +1,30 @@
+# Core LLM and OpenAI packages
+openai>=1.0.0
+langchain>=0.1.0
+langchain-openai>=0.0.5
+langchain-community>=0.0.20
+langchain-core>=0.1.0
+langchain-text-splitters>=0.0.1
+langgraph>=0.0.20
+
+# PDF processing
+PyMuPDF>=1.23.0
+reportlab>=4.0.0
+
+# Web framework
+streamlit>=1.28.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# Web scraping and search
+duckduckgo-search>=4.0.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+
+# Vector store
+faiss-cpu>=1.7.4
+
+# Additional utilities
+lxml>=4.9.0
+
