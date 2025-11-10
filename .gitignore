@@ -2,6 +2,11 @@
 .env
 *.env
 
+# 가상환경
+venv/
+env/
+ENV/
+
 # IDE/OS 자동 생성 파일도 보통 같이 제외
 .vscode/
 __pycache__/
